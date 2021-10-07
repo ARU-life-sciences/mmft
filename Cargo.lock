@@ -393,6 +393,7 @@ dependencies = [
  "atty",
  "bio",
  "clap",
+ "regex",
  "thiserror",
 ]
 

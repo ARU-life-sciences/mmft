@@ -5,6 +5,7 @@ use std::process;
 use mmft::fasta::gc;
 use mmft::fasta::length;
 use mmft::fasta::n50;
+use mmft::fasta::regex;
 
 fn main() -> Result<()> {
     let matches = App::new("mmft")
@@ -41,6 +42,23 @@ fn main() -> Result<()> {
                         .help("Input fasta file path(s)."),
                 ),
         )
+        .subcommand(
+            clap::SubCommand::with_name("regex")
+                .about("Extract fasta records using regex on headers.")
+                // output file name
+                .arg(
+                    Arg::with_name("fasta")
+                        .multiple(true)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::with_name("regex")
+                        .short("r")
+                        .long("regex")
+                        .takes_value(true)
+                        .help("Regex to compile."),
+                ),
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -57,6 +75,10 @@ fn main() -> Result<()> {
         "n50" => {
             let matches = subcommand.1.unwrap();
             n50::get_n50(matches)?;
+        }
+        "regex" => {
+            let matches = subcommand.1.unwrap();
+            regex::regex_sequences(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");
