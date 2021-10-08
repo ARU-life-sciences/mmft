@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{App, Arg};
 use std::process;
 
+use mmft::fasta::extract;
 use mmft::fasta::gc;
 use mmft::fasta::length;
 use mmft::fasta::n50;
@@ -59,6 +60,24 @@ fn main() -> Result<()> {
                         .help("Regex to compile."),
                 ),
         )
+        .subcommand(
+            clap::SubCommand::with_name("extract")
+                .about("Extract (sub)sequence within a fasta file record.")
+                // output file name
+                .arg(
+                    Arg::with_name("fasta")
+                        .multiple(true)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::with_name("region")
+                        .short("r")
+                        .long("region")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Numeric region to extract."),
+                ),
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -79,6 +98,10 @@ fn main() -> Result<()> {
         "regex" => {
             let matches = subcommand.1.unwrap();
             regex::regex_sequences(matches)?;
+        }
+        "extract" => {
+            let matches = subcommand.1.unwrap();
+            extract::extract_region(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");

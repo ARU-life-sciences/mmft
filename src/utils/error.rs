@@ -18,3 +18,13 @@ pub enum FastaWriteError {
     #[error("[-]\tCould not write to file.")]
     CouldNotWrite,
 }
+
+#[derive(Error, Debug)]
+pub enum RegionError {
+    #[error("[-]\tCould not extract the string from the CLI.")]
+    CouldNotUnwrap,
+    #[error("[-]\tCould not write to file.")]
+    CouldNotParse,
+    #[error("[-]\tCould not extract region. Is the range overlapping zero, or larger than the length of the chromosome?")]
+    SeqExtractError,
+}
