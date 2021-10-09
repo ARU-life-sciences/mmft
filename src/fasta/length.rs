@@ -2,6 +2,7 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use bio::io::fasta;
 use std::io;
+use std::path::Path;
 
 pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = matches.values_of("fasta");
@@ -10,13 +11,15 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
         // read directly from files
         Some(f) => {
             for el in f {
+                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+
                 let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
                 for record in reader.records() {
                     let record = record.expect("[-]\tError during fasta record parsing.");
                     let id = record.id();
                     let len = record.seq().len();
                     // write to stdout
-                    println!("{}\t{}", id, len);
+                    println!("{}\t{}\t{}", basename, id, len);
                 }
             }
         }

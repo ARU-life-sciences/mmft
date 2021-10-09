@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 use bio::io::fasta;
 use bio::seq_analysis::gc::gc_content;
 use std::io;
+use std::path::Path;
 
 pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = matches.values_of("fasta");
@@ -11,13 +12,15 @@ pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
         // read directly from files
         Some(f) => {
             for el in f {
+                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+
                 let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
                 for record in reader.records() {
                     let record = record.expect("[-]\tError during fasta record parsing.");
                     let id = record.id();
                     let gc = gc_content(record.seq());
                     // write to stdout
-                    println!("{}\t{}", id, gc);
+                    println!("{}\t{}\t{}", basename, id, gc);
                 }
             }
         }
