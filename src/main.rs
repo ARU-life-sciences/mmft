@@ -5,6 +5,7 @@ use std::process;
 use mmft::fasta::extract;
 use mmft::fasta::gc;
 use mmft::fasta::length;
+use mmft::fasta::merge;
 use mmft::fasta::n50;
 use mmft::fasta::number;
 use mmft::fasta::regex;
@@ -89,6 +90,23 @@ fn main() -> Result<()> {
                         .help("Input fasta file path(s)."),
                 ),
         )
+        .subcommand(
+            clap::SubCommand::with_name("merge")
+                .about("Merge sequences within/between fasta file records.")
+                // output file name
+                .arg(
+                    Arg::with_name("fasta")
+                        .multiple(true)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::with_name("header")
+                        .short("h")
+                        .long("header")
+                        .takes_value(true)
+                        .help("Name of output fasta header."),
+                ),
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -117,6 +135,10 @@ fn main() -> Result<()> {
         "num" => {
             let matches = subcommand.1.unwrap();
             number::get_number_seq_bases(matches)?;
+        }
+        "merge" => {
+            let matches = subcommand.1.unwrap();
+            merge::merge_fastas(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");

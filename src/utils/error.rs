@@ -20,6 +20,12 @@ pub enum FastaWriteError {
 }
 
 #[derive(Error, Debug)]
+pub enum UTF8FormatError {
+    #[error("[-]\tThe fasta was not UTF8 correct.")]
+    NotUTF8,
+}
+
+#[derive(Error, Debug)]
 pub enum RegionError {
     #[error("[-]\tCould not extract the string from the CLI.")]
     CouldNotUnwrap,
