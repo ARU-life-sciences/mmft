@@ -23,6 +23,14 @@ fn main() -> Result<()> {
                     Arg::with_name("fasta")
                         .multiple(true)
                         .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::with_name("extract")
+                        .long("extract")
+                        .short("e")
+                        .takes_value(true)
+                        .required(false)
+                        .help("Fasta records with a length greater than specified are printed."),
                 ),
         )
         .subcommand(

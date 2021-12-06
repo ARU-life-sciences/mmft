@@ -6,6 +6,9 @@ use std::path::Path;
 
 pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = matches.values_of("fasta");
+    let extract_length = matches.value_of("extract");
+
+    let mut writer = fasta::Writer::new(io::stdout());
 
     match input_file {
         // read directly from files
@@ -18,8 +21,18 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                     let record = record.expect("[-]\tError during fasta record parsing.");
                     let id = record.id();
                     let len = record.seq().len();
-                    // write to stdout
-                    println!("{}\t{}\t{}", basename, id, len);
+                    // filtering
+                    if let Some(l) = extract_length {
+                        let length = l.parse::<usize>().unwrap();
+                        if len > length {
+                            writer
+                                .write(id, Some(&format!("length:{}", len)), record.seq())
+                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                        }
+                    } else {
+                        // write to stdout
+                        println!("{}\t{}\t{}", basename, id, len);
+                    }
                 }
             }
         }
@@ -30,8 +43,18 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                 while let Some(Ok(record)) = records.next() {
                     let id = record.id();
                     let len = record.seq().len();
-                    // write to stdout
-                    println!("{}\t{}", id, len);
+                    // filtering
+                    if let Some(l) = extract_length {
+                        let length = l.parse::<usize>().unwrap();
+                        if len > length {
+                            writer
+                                .write(id, Some(&format!("length:{}", len)), record.seq())
+                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                        }
+                    } else {
+                        // write to stdout
+                        println!("{}\t{}", id, len);
+                    }
                 }
             }
             false => {
