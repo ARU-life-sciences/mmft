@@ -17,6 +17,8 @@ It's stuff that's been done many times, but this way I can get it just the way I
 
 - `mmft regex -r "<regex>" <fasta(s)>` or `cat <fasta> | mmft regex -r "<regex>"`. Extracts fasta records from one or multiple fasta files with headers matching the regex. 
 - `mmft extract -r 1-100 <fasta(s)>` or `cat <fasta> | mmft extract -r 1-100`. Extracts first 100 nucleotides from each fasta record. You can of course choose any range, using a dash to separate the numbers.
+- `mmft filter -f <file> <fasta(s)>`. Supply a text file of one ID per line and filter will extract the corresponding fasta records.
+- `mmft merge <fastas>`. Will merge multiple fasta files together into the same record.
 
 Careful when piping into `mmft` as fasta files are not treated separately, they are treated as a continuum of fasta records. Hence, while `mmft n50 1.fasta 2.fasta` shows the n50 of each fasta file separately, `cat *.fasta | mmft n50` will calculate the n50 of both files combined. 
 

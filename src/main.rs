@@ -3,6 +3,7 @@ use clap::{App, Arg};
 use std::process;
 
 use mmft::fasta::extract;
+use mmft::fasta::filter;
 use mmft::fasta::gc;
 use mmft::fasta::length;
 use mmft::fasta::merge;
@@ -100,7 +101,7 @@ fn main() -> Result<()> {
         )
         .subcommand(
             clap::SubCommand::with_name("merge")
-                .about("Merge sequences within/between fasta file records.")
+                .about("Merge sequence records within/between fasta files into a single fasta record.")
                 // output file name
                 .arg(
                     Arg::with_name("fasta")
@@ -113,6 +114,24 @@ fn main() -> Result<()> {
                         .long("header")
                         .takes_value(true)
                         .help("Name of output fasta header."),
+                ),
+        )
+        .subcommand(
+            clap::SubCommand::with_name("filter")
+                .about("Filter sequences on a file of ID's")
+                // output file name
+                .arg(
+                    Arg::with_name("fasta")
+                        .multiple(true)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::with_name("file")
+                        .short("f")
+                        .long("file")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Name of text file with one ID per line."),
                 ),
         )
         .get_matches();
@@ -147,6 +166,10 @@ fn main() -> Result<()> {
         "merge" => {
             let matches = subcommand.1.unwrap();
             merge::merge_fastas(matches)?;
+        }
+        "filter" => {
+            let matches = subcommand.1.unwrap();
+            filter::filter_sequences(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");
