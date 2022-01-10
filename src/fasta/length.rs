@@ -4,9 +4,12 @@ use bio::io::fasta;
 use std::io;
 use std::path::Path;
 
+// TODO, matches could be made less verbose/repetitive.
+
 pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = matches.values_of("fasta");
     let extract_length = matches.value_of("extract");
+    let less = matches.is_present("less");
 
     let mut writer = fasta::Writer::new(io::stdout());
 
@@ -24,10 +27,24 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                     // filtering
                     if let Some(l) = extract_length {
                         let length = l.parse::<usize>().unwrap();
-                        if len > length {
-                            writer
-                                .write(id, Some(&format!("length:{}", len)), record.seq())
-                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+
+                        match less {
+                            false => {
+                                // default, print greater than
+                                if len > length {
+                                    writer
+                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                                }
+                            }
+                            true => {
+                                // alt, print less than
+                                if len < length {
+                                    writer
+                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                                }
+                            }
                         }
                     } else {
                         // write to stdout
@@ -46,10 +63,23 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                     // filtering
                     if let Some(l) = extract_length {
                         let length = l.parse::<usize>().unwrap();
-                        if len > length {
-                            writer
-                                .write(id, Some(&format!("length:{}", len)), record.seq())
-                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                        match less {
+                            false => {
+                                // default, print greater than
+                                if len > length {
+                                    writer
+                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                                }
+                            }
+                            true => {
+                                // alt, print less than
+                                if len < length {
+                                    writer
+                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                                }
+                            }
                         }
                     } else {
                         // write to stdout

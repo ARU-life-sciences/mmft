@@ -32,7 +32,10 @@ fn main() -> Result<()> {
                         .takes_value(true)
                         .required(false)
                         .help("Fasta records with a length greater than specified are printed."),
-                ),
+                )
+                .arg(Arg::with_name("less").long("less").short("l").help(
+                    "Print records with lengths less than value of extract. Default is greater.",
+                )),
         )
         .subcommand(
             clap::SubCommand::with_name("gc")
@@ -101,7 +104,9 @@ fn main() -> Result<()> {
         )
         .subcommand(
             clap::SubCommand::with_name("merge")
-                .about("Merge sequence records within/between fasta files into a single fasta record.")
+                .about(
+                    "Merge sequence records within/between fasta files into a single fasta record.",
+                )
                 // output file name
                 .arg(
                     Arg::with_name("fasta")
