@@ -51,7 +51,7 @@ pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
                                 }
                                 Orientation::Reverse => {
                                     let id = r.id();
-                                    let seq = revcomp::reverse_complement(&r.seq()[skip..]);
+                                    let seq = &revcomp::reverse_complement(&r.seq())[skip..];
 
                                     writer
                                         .write(
@@ -93,7 +93,7 @@ pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
                                 }
                                 Orientation::Reverse => {
                                     let id = r.id();
-                                    let seq = revcomp::reverse_complement(&r.seq()[skip..]);
+                                    let seq = &revcomp::reverse_complement(&r.seq())[skip..];
 
                                     writer
                                         .write(
