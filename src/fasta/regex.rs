@@ -1,5 +1,5 @@
 use crate::utils::{error, stdin};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use bio::io::fasta;
 use regex::Regex;
 use std::io;
@@ -7,7 +7,9 @@ use std::path::Path;
 
 pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = matches.values_of("fasta");
-    let re_str = matches.value_of("regex").unwrap();
+    let re_str = matches
+        .value_of("regex")
+        .context("Please supply a regular expression")?;
 
     let re = Regex::new(re_str);
 
@@ -36,8 +38,11 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
                 for record in reader.records() {
                     let record = record.expect("[-]\tError during fasta record parsing.");
                     let id = record.id();
+                    let description = record.desc().unwrap_or("");
 
-                    if re.is_match(id) {
+                    let id_desc = format!("{} {}", id, description);
+
+                    if re.is_match(&id_desc) {
                         writer
                             .write(id, Some(basename), record.seq())
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
@@ -51,7 +56,11 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
                 let mut records = fasta::Reader::new(io::stdin()).records();
                 while let Some(Ok(record)) = records.next() {
                     let id = record.id();
-                    if re.is_match(id) {
+                    let description = record.desc().unwrap_or("");
+
+                    let id_desc = format!("{} {}", id, description);
+
+                    if re.is_match(&id_desc) {
                         writer
                             .write(id, None, record.seq())
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;

@@ -10,6 +10,7 @@ use mmft::fasta::merge;
 use mmft::fasta::n50;
 use mmft::fasta::number;
 use mmft::fasta::regex;
+use mmft::fasta::translate;
 
 fn main() -> Result<()> {
     let matches = App::new("mmft")
@@ -122,6 +123,16 @@ fn main() -> Result<()> {
                 ),
         )
         .subcommand(
+            clap::SubCommand::with_name("trans")
+                .about("Translate a fasta into all six frames.")
+                // output file name
+                .arg(
+                    Arg::with_name("fasta")
+                        .multiple(true)
+                        .help("Input fasta file path(s)."),
+                ),
+        )
+        .subcommand(
             clap::SubCommand::with_name("filter")
                 .about("Filter sequences on a file of ID's")
                 // output file name
@@ -175,6 +186,10 @@ fn main() -> Result<()> {
         "filter" => {
             let matches = subcommand.1.unwrap();
             filter::filter_sequences(matches)?;
+        }
+        "trans" => {
+            let matches = subcommand.1.unwrap();
+            translate::six_frame_translate(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");
