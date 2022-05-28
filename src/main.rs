@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{App, Arg};
+use clap::{crate_version, Arg, Command};
 use std::process;
 
 use mmft::fasta::extract;
@@ -13,80 +13,82 @@ use mmft::fasta::regex;
 use mmft::fasta::translate;
 
 fn main() -> Result<()> {
-    let matches = App::new("mmft")
-        .version(clap::crate_version!())
+    let matches = Command::new("mmft")
+        .version(crate_version!())
         .author("Max Brown <mb39@sanger.ac.uk>")
         .about("My Minimal Fasta Toolkit")
+        .propagate_version(true)
+        .arg_required_else_help(true)
         .subcommand(
-            clap::SubCommand::with_name("len")
+            Command::new("len")
                 .about("Calculate lengths of fasta file records.")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_values(true)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
-                    Arg::with_name("extract")
+                    Arg::new("extract")
                         .long("extract")
-                        .short("e")
+                        .short('e')
                         .takes_value(true)
                         .required(false)
                         .help("Fasta records with a length greater than specified are printed."),
                 )
-                .arg(Arg::with_name("less").long("less").short("l").help(
+                .arg(Arg::new("less").long("less").short('l').help(
                     "Print records with lengths less than value of extract. Default is greater.",
                 )),
         )
         .subcommand(
-            clap::SubCommand::with_name("gc")
+            Command::new("gc")
                 .about("Calculate GC content of fasta file records.")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_values(true)
                         .help("Input fasta file path(s)."),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("n50")
+            Command::new("n50")
                 .about("Calculate n50 of fasta files.")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
                         .help("Input fasta file path(s)."),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("regex")
+            Command::new("regex")
                 .about("Extract fasta records using regex on headers.")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
-                    Arg::with_name("regex")
-                        .short("r")
+                    Arg::new("regex")
+                        .short('r')
                         .long("regex")
                         .takes_value(true)
                         .help("Regex to compile."),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("extract")
+            Command::new("extract")
                 .about("Extract (sub)sequence within a fasta file record.")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
-                    Arg::with_name("region")
-                        .short("r")
+                    Arg::new("region")
+                        .short('r')
                         .long("region")
                         .takes_value(true)
                         .required(true)
@@ -94,56 +96,55 @@ fn main() -> Result<()> {
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("num")
+            Command::new("num")
                 .about("Calculate number and total base count of fasta file records.")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
                         .help("Input fasta file path(s)."),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("merge")
+            Command::new("merge")
                 .about(
                     "Merge sequence records within/between fasta files into a single fasta record.",
                 )
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
-                    Arg::with_name("header")
-                        .short("h")
+                    Arg::new("header")
                         .long("header")
                         .takes_value(true)
                         .help("Name of output fasta header."),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("trans")
+            Command::new("trans")
                 .about("Translate a fasta into all six frames.")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
                         .help("Input fasta file path(s)."),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("filter")
+            Command::new("filter")
                 .about("Filter sequences on a file of ID's")
                 // output file name
                 .arg(
-                    Arg::with_name("fasta")
-                        .multiple(true)
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
-                    Arg::with_name("file")
-                        .short("f")
+                    Arg::new("file")
+                        .short('f')
                         .long("file")
                         .takes_value(true)
                         .required(true)
@@ -153,42 +154,32 @@ fn main() -> Result<()> {
         .get_matches();
 
     // feed command line options to each main function
-    let subcommand = matches.subcommand();
-    match subcommand.0 {
-        "len" => {
-            let matches = subcommand.1.unwrap();
+    match matches.subcommand() {
+        Some(("len", matches)) => {
             length::get_lengths(matches)?;
         }
-        "gc" => {
-            let matches = subcommand.1.unwrap();
+        Some(("gc", matches)) => {
             gc::get_gc(matches)?;
         }
-        "n50" => {
-            let matches = subcommand.1.unwrap();
+        Some(("n50", matches)) => {
             n50::get_n50(matches)?;
         }
-        "regex" => {
-            let matches = subcommand.1.unwrap();
+        Some(("regex", matches)) => {
             regex::regex_sequences(matches)?;
         }
-        "extract" => {
-            let matches = subcommand.1.unwrap();
+        Some(("extract", matches)) => {
             extract::extract_region(matches)?;
         }
-        "num" => {
-            let matches = subcommand.1.unwrap();
+        Some(("num", matches)) => {
             number::get_number_seq_bases(matches)?;
         }
-        "merge" => {
-            let matches = subcommand.1.unwrap();
+        Some(("merge", matches)) => {
             merge::merge_fastas(matches)?;
         }
-        "filter" => {
-            let matches = subcommand.1.unwrap();
+        Some(("filter", matches)) => {
             filter::filter_sequences(matches)?;
         }
-        "trans" => {
-            let matches = subcommand.1.unwrap();
+        Some(("trans", matches)) => {
             translate::six_frame_translate(matches)?;
         }
         _ => {

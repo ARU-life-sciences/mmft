@@ -2,7 +2,6 @@
 // https://github.com/dweb0/protein-translate/blob/master/src/lib.rs
 
 pub fn translate(seq: &[u8]) -> Vec<u8> {
-    // let mut peptide = String::with_capacity(seq.len() / 3);
     let mut peptide = Vec::with_capacity(seq.len() / 3);
 
     'outer: for triplet in seq.chunks_exact(3) {
