@@ -75,6 +75,12 @@ fn main() -> Result<()> {
                         .long("regex")
                         .takes_value(true)
                         .help("Regex to compile."),
+                )
+                .arg(
+                    Arg::new("inverse")
+                        .short('i')
+                        .long("inverse")
+                        .help("Inverse regex match."),
                 ),
         )
         .subcommand(

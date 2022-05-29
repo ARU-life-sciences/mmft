@@ -10,6 +10,7 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
     let re_str = matches
         .value_of("regex")
         .context("Please supply a regular expression")?;
+    let inverse: bool = matches.is_present("inverse");
 
     let re = Regex::new(re_str);
 
@@ -42,9 +43,27 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
 
                     let id_desc = format!("{} {}", id, description);
 
+                    // if there is no match, we want to have
+                    // the option to print
                     if re.is_match(&id_desc) {
+                        if !inverse {
+                            writer
+                                .write(
+                                    id,
+                                    Some(&format!("{} - {}", description, basename)),
+                                    record.seq(),
+                                )
+                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                        } else {
+                            continue;
+                        }
+                    } else if inverse {
                         writer
-                            .write(id, Some(basename), record.seq())
+                            .write(
+                                id,
+                                Some(&format!("{} - {}", description, basename)),
+                                record.seq(),
+                            )
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                     }
                 }
@@ -61,8 +80,16 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
                     let id_desc = format!("{} {}", id, description);
 
                     if re.is_match(&id_desc) {
+                        if !inverse {
+                            writer
+                                .write(id, Some(description), record.seq())
+                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                        } else {
+                            continue;
+                        }
+                    } else if inverse {
                         writer
-                            .write(id, None, record.seq())
+                            .write(id, Some(description), record.seq())
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                     }
                 }
