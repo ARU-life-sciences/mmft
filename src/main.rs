@@ -10,6 +10,7 @@ use mmft::fasta::merge;
 use mmft::fasta::n50;
 use mmft::fasta::number;
 use mmft::fasta::regex;
+use mmft::fasta::sample;
 use mmft::fasta::translate;
 
 fn main() -> Result<()> {
@@ -157,6 +158,24 @@ fn main() -> Result<()> {
                         .help("Name of text file with one ID per line."),
                 ),
         )
+        .subcommand(
+            Command::new("sample")
+                .about("Randomly sample records from a fasta file.")
+                // output file name
+                .arg(
+                    Arg::new("fasta")
+                        .multiple_occurrences(true)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::new("sample-number")
+                        .short('n')
+                        .long("sample-number")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Number of records to sample."),
+                ),
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -187,6 +206,9 @@ fn main() -> Result<()> {
         }
         Some(("trans", matches)) => {
             translate::six_frame_translate(matches)?;
+        }
+        Some(("sample", matches)) => {
+            sample::sample(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");

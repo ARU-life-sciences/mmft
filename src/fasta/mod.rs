@@ -7,3 +7,4 @@ pub mod n50;
 pub mod number;
 pub mod regex;
 pub mod translate;
+pub mod sample;

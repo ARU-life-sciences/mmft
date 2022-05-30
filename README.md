@@ -1,10 +1,12 @@
 # My (Max's?) Minimal Fasta Toolkit
 
-Nothing sophisticated. Minimal, simple fasta tools. 
-
-It's stuff that's been done many times, but this way I can get it just the way I like it. May be of use to others.
+Nothing sophisticated. Minimal, simple fasta tools. Each program is self-contained in the `./src/fasta` directory, and follows similar boilerplate code, related to file handling.
 
 ## Usage
+
+Typing `mmft` (shows subcommands) or `mmft <subcommand> -h` (shows specific subcommand) will show the usage of the tool in question.
+
+Commands are added only as and when I need them. If you like what you see, please feel free to contribute a PR with your favourite subcommand.
 
 ### Calculations
 
@@ -19,8 +21,9 @@ It's stuff that's been done many times, but this way I can get it just the way I
 - `mmft extract -r 1-100 <fasta(s)>` or `cat <fasta> | mmft extract -r 1-100`. Extracts first 100 nucleotides from each fasta record. You can of course choose any range, using a dash to separate the numbers.
 - `mmft filter -f <file> <fasta(s)>`. Supply a text file of one ID per line and filter will extract the corresponding fasta records.
 - `mmft merge <fastas>`. Will merge multiple fasta files together into the same record.
+- `mmft sample <fasta(s)> -n <N>`. Will randomly sample a fasta file (or stream of fasta files) to a specified number of records.
 
-Careful when piping into `mmft` as fasta files are not treated separately, they are treated as a continuum of fasta records. Hence, while `mmft n50 1.fasta 2.fasta` shows the n50 of each fasta file separately, `cat *.fasta | mmft n50` will calculate the n50 of both files combined. 
+Careful when piping into `mmft` as fasta files are not treated separately, they are treated as a continuum of fasta records. Hence, while `mmft n50 1.fasta 2.fasta` shows the n50 of each fasta file separately, `cat *.fasta | mmft n50` will calculate the n50 of both files combined. In addition, `mmft sample` loads the entire STDIN into memory, so be careful when piping large files.
 
 All printed to STDOUT.
 
@@ -31,7 +34,5 @@ I'll add stuff as and when I have time, or they are of use. Maybe:
 - Simple pattern matching, returning positions.
 - Potential ORFs
 - Any kmer stuff?
-
-### Motivation
-
-Interesting to explore the `thiserror` and the `anyhow` crates in the making of this repo.
+- Testing
+- Better documentation
