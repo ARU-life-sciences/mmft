@@ -3,8 +3,13 @@ name = "mmft"
 version = "0.1.0"
 authors = ["Max Brown <mb39@sanger.ac.uk>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "A minimal fasta toolkit."
+keywords = ["fasta", "tools"]
+categories = ["command-line-utilities", "science"]
+homepage = "https://github.com/tolkit/mmft"
+documentation = "https://github.com/tolkit/mmft"
+repository = "https://github.com/tolkit/mmft"
 
 [dependencies]
 bio = "0.41.0"
