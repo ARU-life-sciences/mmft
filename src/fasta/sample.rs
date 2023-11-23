@@ -2,6 +2,7 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use bio::io::fasta;
 use rand::distributions::{Distribution, Uniform};
+use rand::prelude::SliceRandom;
 use std::io::{self, BufRead};
 
 pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
@@ -34,29 +35,32 @@ pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
 
             // now iterate for real
             for el in f {
-                let bounds = Uniform::from(0..total_records);
-                let mut rng = rand::thread_rng();
+                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid");
 
-                let mut index = 0;
-                loop {
-                    let random_index: i32 = bounds.sample(&mut rng);
+                let records = reader.records();
 
-                    let mut inner_index = 0;
-                    let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
-                    let mut records = reader.records();
-                    while let Some(Ok(record)) = records.next() {
-                        if inner_index == random_index {
-                            writer
-                                .write(record.id(), Some(record.desc().unwrap_or("")), record.seq())
-                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
-                            break;
-                        }
-                        inner_index += 1;
-                    }
+                let mut numbers: Vec<usize> = (0..total_records as usize).collect();
+                numbers.shuffle(&mut rand::thread_rng());
+                let mut usable_numbers = numbers[0..(sample_number as usize)].to_vec();
+                usable_numbers.sort();
 
-                    index += 1;
-                    if index == sample_number {
-                        break;
+                for (inner_index, record) in records.enumerate() {
+                    let inner_record = record?;
+                    let first_random_index = match usable_numbers.first() {
+                        Some(i) => i,
+                        None => continue,
+                    };
+
+                    if inner_index == *first_random_index {
+                        writer
+                            .write(
+                                inner_record.id(),
+                                Some(inner_record.desc().unwrap_or("")),
+                                inner_record.seq(),
+                            )
+                            .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+
+                        usable_numbers.remove(0);
                     }
                 }
             }
