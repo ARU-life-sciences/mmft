@@ -4,8 +4,8 @@ use bio::io::fasta;
 use std::io;
 
 pub fn merge_fastas(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
-    let headers_op = matches.value_of("header");
+    let input_file = crate::get_fasta_files(matches);
+    let headers_op = matches.get_one::<String>("header");
 
     match input_file {
         // read directly from files
@@ -16,9 +16,9 @@ pub fn merge_fastas(matches: &clap::ArgMatches) -> Result<()> {
                 None => println!(">merged"),
             }
             for el in f {
-                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
+                let reader = fasta::Reader::from_file(el)?;
                 for record in reader.records() {
-                    let record = record.expect("[-]\tError during fasta record parsing.");
+                    let record = record?;
                     let seq = std::str::from_utf8(record.seq());
                     // write to stdout
                     match seq {
@@ -27,7 +27,7 @@ pub fn merge_fastas(matches: &clap::ArgMatches) -> Result<()> {
                     }
                 }
             }
-            print!("\n");
+            println!();
         }
         // read from stdin
         None => match stdin::is_stdin() {
@@ -46,7 +46,7 @@ pub fn merge_fastas(matches: &clap::ArgMatches) -> Result<()> {
                         Err(_) => bail!(error::UTF8FormatError::NotUTF8),
                     }
                 }
-                print!("\n");
+                println!();
             }
             false => {
                 bail!(error::StdinError::NoSequence)

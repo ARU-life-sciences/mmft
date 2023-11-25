@@ -1,15 +1,15 @@
 use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use bio::io::fasta;
-use rand::distributions::{Distribution, Uniform};
 use rand::prelude::SliceRandom;
 use std::io::{self, BufRead};
 
 pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
-    let sample_number: i32 = matches.value_of_t("sample-number")?;
+    let input_file = crate::get_fasta_files(matches);
+    let sample_number = *matches
+        .get_one::<i32>("sample-number")
+        .expect("required by clap");
 
-    // writer here?
     let mut writer = fasta::Writer::new(io::stdout());
 
     match input_file {
@@ -18,7 +18,7 @@ pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
             // total number of records
             let mut total_records = 0;
             for el in f.clone() {
-                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
+                let reader = fasta::Reader::from_file(el)?;
                 // we need to iterate over the records once to get the total number of records
                 for _ in reader.records() {
                     total_records += 1;
@@ -35,7 +35,7 @@ pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
 
             // now iterate for real
             for el in f {
-                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid");
+                let reader = fasta::Reader::from_file(el)?;
 
                 let records = reader.records();
 
@@ -101,33 +101,33 @@ pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
                     total_records
                 );
                 }
+                // now sample
+                let reader = fasta::Reader::new(stdin_fasta.as_bytes());
 
-                // now second time we extract the records
-                // make a random vector of usize with max upper bound
-                // being the total number of records
-                let bounds = Uniform::from(0..total_records);
-                let mut rng = rand::thread_rng();
+                let records = reader.records();
 
-                let mut index = 0;
-                loop {
-                    let random_index: i32 = bounds.sample(&mut rng);
+                let mut numbers: Vec<usize> = (0..total_records as usize).collect();
+                numbers.shuffle(&mut rand::thread_rng());
+                let mut usable_numbers = numbers[0..(sample_number as usize)].to_vec();
+                usable_numbers.sort();
 
-                    let mut inner_index = 0;
+                for (inner_index, record) in records.enumerate() {
+                    let inner_record = record?;
+                    let first_random_index = match usable_numbers.first() {
+                        Some(i) => i,
+                        None => continue,
+                    };
 
-                    let mut fasta_records = fasta::Reader::new(stdin_fasta.as_bytes()).records();
-                    while let Some(Ok(record)) = fasta_records.next() {
-                        if inner_index == random_index {
-                            writer
-                                .write(record.id(), Some(record.desc().unwrap_or("")), record.seq())
-                                .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
-                            break;
-                        }
-                        inner_index += 1;
-                    }
+                    if inner_index == *first_random_index {
+                        writer
+                            .write(
+                                inner_record.id(),
+                                Some(inner_record.desc().unwrap_or("")),
+                                inner_record.seq(),
+                            )
+                            .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
 
-                    index += 1;
-                    if index == sample_number {
-                        break;
+                        usable_numbers.remove(0);
                     }
                 }
             }

@@ -2,16 +2,12 @@ use crate::utils::{error, parse::parse_region, stdin};
 use anyhow::{bail, Result};
 use bio::io::fasta;
 use std::io;
-use std::path::Path;
 
 pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
-    let region = matches.value_of("region");
-
-    let region = match region {
-        Some(r) => r,
-        None => bail!(error::RegionError::CouldNotUnwrap),
-    };
+    let input_file = crate::get_fasta_files(matches);
+    let region = matches
+        .get_one::<String>("region")
+        .expect("handled by clap");
 
     let parsed_region = parse_region(region)?;
 
@@ -21,12 +17,12 @@ pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
     match input_file {
         // read directly from files
         Some(f) => {
-            for el in f {
-                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+            for el in f.iter() {
+                let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
+                let reader = fasta::Reader::from_file(el)?;
                 for record in reader.records() {
-                    let record = record.expect("[-]\tError during fasta record parsing.");
+                    let record = record?;
                     let id = record.id();
                     let seq = record.seq().get(parsed_region[0]..parsed_region[1]);
 

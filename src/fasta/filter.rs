@@ -17,8 +17,8 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
 }
 
 pub fn filter_sequences(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
-    let id_file = matches.value_of("file").unwrap();
+    let input_file = crate::get_fasta_files(matches);
+    let id_file = matches.get_one::<String>("file").unwrap();
     // just read file into memory for ease...
     let ids = lines_from_file(id_file);
     // writer here?
@@ -27,17 +27,17 @@ pub fn filter_sequences(matches: &clap::ArgMatches) -> Result<()> {
     match input_file {
         // read directly from files
         Some(f) => {
-            for el in f {
-                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+            for el in f.iter() {
+                let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
+                let reader = fasta::Reader::from_file(el)?;
                 for record in reader.records() {
-                    let record = record.expect("[-]\tError during fasta record parsing.");
+                    let record = record?;
                     let id = record.id();
 
                     if ids.contains(&id.to_owned()) {
                         writer
-                            .write(id, Some(basename), record.seq())
+                            .write(id, Some(&basename), record.seq())
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                     }
                 }

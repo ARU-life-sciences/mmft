@@ -3,7 +3,6 @@ use anyhow::{bail, Result};
 use bio::io::fasta;
 use std::fmt;
 use std::io;
-use std::path::Path;
 
 enum Orientation {
     Forward,
@@ -20,15 +19,15 @@ impl fmt::Display for Orientation {
 }
 
 pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
+    let input_file = crate::get_fasta_files(matches);
 
     let mut writer = fasta::Writer::new(io::stdout());
 
     match input_file {
         // read directly from files
         Some(f) => {
-            for el in f {
-                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+            for el in f.iter() {
+                let basename = crate::get_basename_from_pathbuf(el)?;
 
                 let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
                 for record in reader.records() {
@@ -44,20 +43,20 @@ pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
                                     writer
                                         .write(
                                             &format!("{}-strand:{}-skip:{}", id, strand, skip),
-                                            Some(basename),
+                                            Some(&basename),
                                             &translate::translate(seq),
                                         )
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                                 Orientation::Reverse => {
                                     let id = r.id();
-                                    let seq = &revcomp::reverse_complement(&r.seq())[skip..];
+                                    let seq = &revcomp::reverse_complement(r.seq())[skip..];
 
                                     writer
                                         .write(
                                             &format!("{}-strand:{}-skip:{}", id, strand, skip),
-                                            Some(basename),
-                                            &translate::translate(&seq),
+                                            Some(&basename),
+                                            &translate::translate(seq),
                                         )
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
@@ -93,13 +92,13 @@ pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
                                 }
                                 Orientation::Reverse => {
                                     let id = r.id();
-                                    let seq = &revcomp::reverse_complement(&r.seq())[skip..];
+                                    let seq = &revcomp::reverse_complement(r.seq())[skip..];
 
                                     writer
                                         .write(
                                             &format!("{}-strand:{}-skip:{}", id, strand, skip),
                                             None,
-                                            &translate::translate(&seq),
+                                            &translate::translate(seq),
                                         )
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }

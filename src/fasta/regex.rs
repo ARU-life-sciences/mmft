@@ -1,16 +1,15 @@
 use crate::utils::{error, stdin};
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use bio::io::fasta;
 use regex::Regex;
 use std::io;
-use std::path::Path;
 
 pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
+    let input_file = crate::get_fasta_files(matches);
     let re_str = matches
-        .value_of("regex")
-        .context("Please supply a regular expression")?;
-    let inverse: bool = matches.is_present("inverse");
+        .get_one::<String>("regex")
+        .expect("required by clap");
+    let inverse: bool = matches.get_flag("inverse");
 
     let re = Regex::new(re_str);
 
@@ -32,12 +31,12 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
     match input_file {
         // read directly from files
         Some(f) => {
-            for el in f {
-                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+            for el in f.iter() {
+                let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
+                let reader = fasta::Reader::from_file(el)?;
                 for record in reader.records() {
-                    let record = record.expect("[-]\tError during fasta record parsing.");
+                    let record = record?;
                     let id = record.id();
                     let description = record.desc().unwrap_or("");
 

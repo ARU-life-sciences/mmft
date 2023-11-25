@@ -2,18 +2,17 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use bio::io::fasta;
 use io::{BufReader, Stdin};
-use std::path;
 use std::{fs::File, io};
 
 pub fn get_n50(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
+    let input_file = crate::get_fasta_files(matches);
 
     match input_file {
         // read directly from files
         Some(f) => {
-            for el in f {
-                let basename = path::Path::new(el).file_name().unwrap().to_str().unwrap();
-                let reader = FFile(fasta::Reader::from_file(el).expect("[-]\tPath invalid."));
+            for el in f.iter() {
+                let basename = crate::get_basename_from_pathbuf(el)?;
+                let reader = FFile(fasta::Reader::from_file(el)?);
                 let n50 = reader.n50();
                 println!("{}\t{}", basename, n50);
             }

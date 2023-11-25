@@ -2,20 +2,17 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use bio::io::fasta;
 use std::io;
-use std::path::Path;
 
 pub fn get_number_seq_bases(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
+    let input_file = crate::get_fasta_files(matches);
 
     match input_file {
         // read directly from files
         Some(f) => {
-            for el in f {
-                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+            for el in f.iter() {
+                let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let mut reader = fasta::Reader::from_file(el)
-                    .expect("[-]\tPath invalid.")
-                    .records();
+                let mut reader = fasta::Reader::from_file(el)?.records();
                 let mut nb_reads = 0;
                 let mut nb_bases = 0;
 

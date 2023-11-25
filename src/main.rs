@@ -1,5 +1,7 @@
 use anyhow::Result;
 use clap::{crate_version, Arg, Command};
+use clap::{value_parser, ArgAction};
+use std::path::PathBuf;
 use std::process;
 
 use mmft::fasta::extract;
@@ -16,7 +18,7 @@ use mmft::fasta::translate;
 fn main() -> Result<()> {
     let matches = Command::new("mmft")
         .version(crate_version!())
-        .author("Max Brown <mb39@sanger.ac.uk>")
+        .author("Max Brown <max.carter-brown@aru.ac.uk>")
         .about("My Minimal Fasta Toolkit")
         .propagate_version(true)
         .arg_required_else_help(true)
@@ -26,18 +28,23 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_values(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
                     Arg::new("extract")
                         .long("extract")
                         .short('e')
-                        .takes_value(true)
+                        .value_parser(value_parser!(usize))
+                        .num_args(1)
                         .required(false)
                         .help("Fasta records with a length greater than specified are printed."),
                 )
-                .arg(Arg::new("less").long("less").short('l').help(
+                .arg(Arg::new("less")
+                    .long("less")
+                    .action(ArgAction::SetTrue)
+                    .short('l').help(
                     "Print records with lengths less than value of extract. Default is greater.",
                 )),
         )
@@ -47,7 +54,8 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_values(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 ),
         )
@@ -57,7 +65,8 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 ),
         )
@@ -67,20 +76,23 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
                     Arg::new("regex")
                         .short('r')
                         .long("regex")
-                        .takes_value(true)
+                        .num_args(1)
+                        .required(true)
                         .help("Regex to compile."),
                 )
                 .arg(
                     Arg::new("inverse")
                         .short('i')
                         .long("inverse")
+                        .action(ArgAction::SetTrue)
                         .help("Inverse regex match."),
                 ),
         )
@@ -90,14 +102,15 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
                     Arg::new("region")
                         .short('r')
                         .long("region")
-                        .takes_value(true)
+                        .num_args(1)
                         .required(true)
                         .help("Numeric region to extract."),
                 ),
@@ -108,7 +121,8 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 ),
         )
@@ -120,13 +134,14 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
                     Arg::new("header")
                         .long("header")
-                        .takes_value(true)
+                        .num_args(1)
                         .help("Name of output fasta header."),
                 ),
         )
@@ -136,7 +151,8 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 ),
         )
@@ -146,14 +162,15 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
                     Arg::new("file")
                         .short('f')
                         .long("file")
-                        .takes_value(true)
+                        .num_args(1)
                         .required(true)
                         .help("Name of text file with one ID per line."),
                 ),
@@ -164,14 +181,16 @@ fn main() -> Result<()> {
                 // output file name
                 .arg(
                     Arg::new("fasta")
-                        .multiple_occurrences(true)
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
                     Arg::new("sample-number")
                         .short('n')
                         .long("sample-number")
-                        .takes_value(true)
+                        .value_parser(value_parser!(i32))
+                        .num_args(1)
                         .required(true)
                         .help("Number of records to sample."),
                 ),

@@ -2,31 +2,28 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use bio::io::fasta;
 use std::io;
-use std::path::Path;
-
-// TODO, matches could be made less verbose/repetitive.
 
 pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
-    let input_file = matches.values_of("fasta");
-    let extract_length = matches.value_of("extract");
-    let less = matches.is_present("less");
+    let input_file = crate::get_fasta_files(matches);
+    let extract_length = matches.get_one::<usize>("extract");
+    let less = matches.get_flag("less");
 
     let mut writer = fasta::Writer::new(io::stdout());
 
     match input_file {
         // read directly from files
         Some(f) => {
-            for el in f {
-                let basename = Path::new(el).file_name().unwrap().to_str().unwrap();
+            for el in f.iter() {
+                let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el).expect("[-]\tPath invalid.");
+                let reader = fasta::Reader::from_file(el)?;
                 for record in reader.records() {
-                    let record = record.expect("[-]\tError during fasta record parsing.");
+                    let record = record?;
                     let id = record.id();
                     let len = record.seq().len();
                     // filtering
                     if let Some(l) = extract_length {
-                        let length = l.parse::<usize>().unwrap();
+                        let length = *l;
 
                         match less {
                             false => {
@@ -62,7 +59,7 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                     let len = record.seq().len();
                     // filtering
                     if let Some(l) = extract_length {
-                        let length = l.parse::<usize>().unwrap();
+                        let length = *l;
                         match less {
                             false => {
                                 // default, print greater than
