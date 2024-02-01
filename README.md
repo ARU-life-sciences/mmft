@@ -1,6 +1,8 @@
 # My (Max's?) Minimal Fasta Toolkit
 
-Nothing sophisticated. Minimal, simple fasta tools. Each program is self-contained in the `./src/fasta` directory, and follows similar boilerplate code, related to file handling.
+Minimal, simple fasta tools.
+
+Each program is self-contained in the `./src/fasta` directory, and follows similar boilerplate code, related to file handling. So if you feel like contributing and/or adding your own subcommand, please do.
 
 ## Usage
 
@@ -14,6 +16,7 @@ Commands are added only as and when I need them. If you like what you see, pleas
 - `mmft gc <fasta(s)>` or `cat <fasta(s)> | mmft gc`. Calculates GC content of each fasta record.
 - `mmft n50 <fasta(s)>` or `cat <fasta(s)> | mmft n50`. Calculates n50 of a fasta record (or stream of fasta files combined).
 - `mmft num <fasta(s)>` or `cat <fasta(s)> | mmft num`. Calculates number of sequences, and total number of base pairs in the fasta file input(s).
+- `mmft revcomp <fasta(s)>` or `cat <fasta(s) | mmft revcomp`. Reverse complements each record in the fasta file.
 
 ### File manipulations
 
