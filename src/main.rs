@@ -12,6 +12,7 @@ use mmft::fasta::merge;
 use mmft::fasta::n50;
 use mmft::fasta::number;
 use mmft::fasta::regex;
+use mmft::fasta::reverse;
 use mmft::fasta::sample;
 use mmft::fasta::translate;
 
@@ -195,6 +196,16 @@ fn main() -> Result<()> {
                         .help("Number of records to sample."),
                 ),
         )
+        .subcommand(
+            Command::new("reverse")
+                .about("Reverse complement each record in an input fasta")
+                .arg(
+                    Arg::new("fasta")
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
+                        .help("Input fasta file path(s)."),
+                )
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -229,6 +240,7 @@ fn main() -> Result<()> {
         Some(("sample", matches)) => {
             sample::sample(matches)?;
         }
+        Some(("reverse", matches)) => reverse::reverse(matches)?,
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");
             process::exit(1);

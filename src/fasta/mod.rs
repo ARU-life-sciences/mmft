@@ -6,5 +6,6 @@ pub mod merge;
 pub mod n50;
 pub mod number;
 pub mod regex;
-pub mod translate;
+pub mod reverse;
 pub mod sample;
+pub mod translate;
