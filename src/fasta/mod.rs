@@ -3,6 +3,7 @@ pub mod filter;
 pub mod gc;
 pub mod length;
 pub mod merge;
+pub mod min;
 pub mod n50;
 pub mod number;
 pub mod regex;

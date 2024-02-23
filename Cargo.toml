@@ -20,3 +20,4 @@ regex = "1.10.2"
 rand = "0.8.5"
 flate2 = "1.0.28"
 clap = { version = "4.4.8", features = ["cargo"] }
+lexical-sort = "0.3.1"

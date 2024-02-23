@@ -9,6 +9,7 @@ use mmft::fasta::filter;
 use mmft::fasta::gc;
 use mmft::fasta::length;
 use mmft::fasta::merge;
+use mmft::fasta::min;
 use mmft::fasta::n50;
 use mmft::fasta::number;
 use mmft::fasta::regex;
@@ -206,6 +207,17 @@ fn main() -> Result<()> {
                         .help("Input fasta file path(s)."),
                 )
         )
+        .subcommand(
+            Command::new("min")
+                .about("Return the lexicographically minimal rotation of fasta file record sequences.")
+                // output file name
+                .arg(
+                    Arg::new("fasta")
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
+                        .help("Input fasta file path(s)."),
+                ),
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -241,6 +253,9 @@ fn main() -> Result<()> {
             sample::sample(matches)?;
         }
         Some(("reverse", matches)) => reverse::reverse(matches)?,
+        Some(("min", matches)) => {
+            min::min(matches)?;
+        }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");
             process::exit(1);
