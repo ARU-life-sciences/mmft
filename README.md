@@ -17,6 +17,7 @@ Commands are added only as and when I need them. If you like what you see, pleas
 - `mmft n50 <fasta(s)>` or `cat <fasta(s)> | mmft n50`. Calculates n50 of a fasta record (or stream of fasta files combined).
 - `mmft num <fasta(s)>` or `cat <fasta(s)> | mmft num`. Calculates number of sequences, and total number of base pairs in the fasta file input(s).
 - `mmft revcomp <fasta(s)>` or `cat <fasta(s) | mmft revcomp`. Reverse complements each record in the fasta file.
+- `mmft min <fasta(s)>` or `cat <fasta(s) | mmft min`. Minimally lexicographically rotated string returned. Takes into account reverse complement too.
 
 ### File manipulations
 
@@ -25,8 +26,9 @@ Commands are added only as and when I need them. If you like what you see, pleas
 - `mmft filter -f <file> <fasta(s)>`. Supply a text file of one ID per line and filter will extract the corresponding fasta records.
 - `mmft merge <fastas>`. Will merge multiple fasta files together into the same record.
 - `mmft sample <fasta(s)> -n <N>`. Will randomly sample a fasta file (or stream of fasta files) to a specified number of records.
+- `mmft split (-d <DIR>) -n <N> <fasta(s)>`. Splits fasta into equal chunks with the last chunk the remainder if record number not perfectly divisible by chunk number. 
 
-Careful when piping into `mmft` as fasta files are not treated separately, they are treated as a continuum of fasta records. Hence, while `mmft n50 1.fasta 2.fasta` shows the n50 of each fasta file separately, `cat *.fasta | mmft n50` will calculate the n50 of both files combined. In addition, `mmft sample` loads the entire STDIN into memory, so be careful when piping large files.
+Careful when piping into `mmft` as fasta files are not treated separately, they are treated as a continuum of fasta records. Hence, while `mmft n50 1.fasta 2.fasta` shows the n50 of each fasta file separately, `cat *.fasta | mmft n50` will calculate the n50 of both files combined. In addition, `mmft sample` loads the entire STDIN into memory, so be careful when piping large files. Some functions don't support piping (`filter`, `merge`, `sample`, `split`).
 
 All printed to STDOUT.
 

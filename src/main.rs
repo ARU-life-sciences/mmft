@@ -15,6 +15,7 @@ use mmft::fasta::number;
 use mmft::fasta::regex;
 use mmft::fasta::reverse;
 use mmft::fasta::sample;
+use mmft::fasta::split;
 use mmft::fasta::translate;
 
 fn main() -> Result<()> {
@@ -218,6 +219,37 @@ fn main() -> Result<()> {
                         .help("Input fasta file path(s)."),
                 ),
         )
+        .subcommand(
+            Command::new("split")
+                .about("Split a fasta into multiple files based on record count.")
+                .arg(
+                    Arg::new("fasta")
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::new("number")
+                        .short('n')
+                        .long("number")
+                        .value_parser(value_parser!(i32))
+                        .num_args(1)
+                        .required(true)
+                        .help("Number of records per file."),
+                )
+                .arg(
+                    Arg::new("dir")
+                        .short('d')
+                        .long("dir")
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(1)
+                        .default_value(".")
+                        .help(
+                            "Output directory for split files. Default is current working directory.",
+                        ),
+
+                )
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -255,6 +287,9 @@ fn main() -> Result<()> {
         Some(("reverse", matches)) => reverse::reverse(matches)?,
         Some(("min", matches)) => {
             min::min(matches)?;
+        }
+        Some(("split", matches)) => {
+            split::split_fasta(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");

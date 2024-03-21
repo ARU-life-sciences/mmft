@@ -9,4 +9,5 @@ pub mod number;
 pub mod regex;
 pub mod reverse;
 pub mod sample;
+pub mod split;
 pub mod translate;
