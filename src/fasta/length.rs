@@ -20,6 +20,7 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                 for record in reader.records() {
                     let record = record?;
                     let id = record.id();
+                    let desc = record.desc().unwrap_or("");
                     let len = record.seq().len();
                     // filtering
                     if let Some(l) = extract_length {
@@ -30,7 +31,11 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // default, print greater than
                                 if len > length {
                                     writer
-                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .write(
+                                            id,
+                                            Some(&format!("{}:length:{}", desc, len)),
+                                            record.seq(),
+                                        )
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }
@@ -38,7 +43,11 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // alt, print less than
                                 if len < length {
                                     writer
-                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .write(
+                                            id,
+                                            Some(&format!("{}:length:{}", desc, len)),
+                                            record.seq(),
+                                        )
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }
@@ -56,6 +65,7 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                 let mut records = fasta::Reader::new(io::stdin()).records();
                 while let Some(Ok(record)) = records.next() {
                     let id = record.id();
+                    let desc = record.desc().unwrap_or("");
                     let len = record.seq().len();
                     // filtering
                     if let Some(l) = extract_length {
@@ -65,7 +75,11 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // default, print greater than
                                 if len > length {
                                     writer
-                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .write(
+                                            id,
+                                            Some(&format!("{}:length:{}", desc, len)),
+                                            record.seq(),
+                                        )
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }
@@ -73,7 +87,11 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // alt, print less than
                                 if len < length {
                                     writer
-                                        .write(id, Some(&format!("length:{}", len)), record.seq())
+                                        .write(
+                                            id,
+                                            Some(&format!("{}:length:{}", desc, len)),
+                                            record.seq(),
+                                        )
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }
