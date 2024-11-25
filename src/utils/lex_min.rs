@@ -53,7 +53,7 @@ pub fn lex_min(dna_string: &[u8]) -> Result<String> {
     let f = String::from_utf8([start_f, end_f].concat())?;
     let r = String::from_utf8([start_r, end_r].concat())?;
 
-    let mut strings = vec![&f, &r];
+    let mut strings = [&f, &r];
     strings.string_sort_unstable(natural_lexical_cmp);
     Ok(strings[0].to_string())
 }

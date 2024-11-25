@@ -194,8 +194,17 @@ fn main() -> Result<()> {
                         .long("sample-number")
                         .value_parser(value_parser!(i32))
                         .num_args(1)
-                        .required(true)
+                        .required_unless_present("sample-size")
                         .help("Number of records to sample."),
+                )
+                .arg(
+                    Arg::new("sample-size")
+                        .short('s')
+                        .long("sample-size")
+                        .value_parser(value_parser!(String))
+                        .num_args(1)
+                        .required_unless_present("sample-number")
+                        .help("Target file size for the sampled sequences (e.g. 10Mb, 3Kb, 5Gb)")
                 ),
         )
         .subcommand(
