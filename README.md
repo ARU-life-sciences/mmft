@@ -36,6 +36,7 @@ All printed to STDOUT.
 
 I'll add stuff as and when I have time, or they are of use. Maybe:
 
+- Single/multiline fasta exchange.
 - Simple pattern matching, returning positions.
 - Potential ORFs
 - Any kmer stuff?

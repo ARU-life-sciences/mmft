@@ -1,6 +1,9 @@
-use crate::utils::{error, stdin};
+use crate::{
+    utils::{error, stdin},
+    FID,
+};
 use anyhow::{bail, Result};
-use bio::io::fasta;
+use noodles_fasta::{self as fasta, record::Definition, Record};
 use std::io;
 
 pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
@@ -16,12 +19,17 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
             for el in f.iter() {
                 let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el)?;
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
                     let record = record?;
-                    let id = record.id();
-                    let desc = record.desc().unwrap_or("");
-                    let len = record.seq().len();
+                    let id = crate::fasta_id_description(&record, FID::Id)?;
+                    let desc = crate::fasta_id_description(&record, FID::Description)?;
+                    let len = record.sequence().len();
+
+                    let definition = Definition::new(
+                        id.clone(),
+                        Some(format!("{}:length:{}", desc, len).into_bytes()),
+                    );
                     // filtering
                     if let Some(l) = extract_length {
                         let length = *l;
@@ -31,11 +39,10 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // default, print greater than
                                 if len > length {
                                     writer
-                                        .write(
-                                            id,
-                                            Some(&format!("{}:length:{}", desc, len)),
-                                            record.seq(),
-                                        )
+                                        .write_record(&Record::new(
+                                            definition,
+                                            record.sequence().clone(),
+                                        ))
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }
@@ -43,11 +50,10 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // alt, print less than
                                 if len < length {
                                     writer
-                                        .write(
-                                            id,
-                                            Some(&format!("{}:length:{}", desc, len)),
-                                            record.seq(),
-                                        )
+                                        .write_record(&Record::new(
+                                            definition,
+                                            record.sequence().clone(),
+                                        ))
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }
@@ -62,11 +68,17 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
         // read from stdin
         None => match stdin::is_stdin() {
             true => {
-                let mut records = fasta::Reader::new(io::stdin()).records();
+                let mut reader = crate::fasta_reader_stdin();
+                let mut records = reader.records();
                 while let Some(Ok(record)) = records.next() {
-                    let id = record.id();
-                    let desc = record.desc().unwrap_or("");
-                    let len = record.seq().len();
+                    let id = crate::fasta_id_description(&record, FID::Id)?;
+                    let desc = crate::fasta_id_description(&record, FID::Description)?;
+
+                    let len = record.sequence().len();
+                    let definition = Definition::new(
+                        id.clone(),
+                        Some(format!("{}:length:{}", desc, len).into_bytes()),
+                    );
                     // filtering
                     if let Some(l) = extract_length {
                         let length = *l;
@@ -75,11 +87,10 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // default, print greater than
                                 if len > length {
                                     writer
-                                        .write(
-                                            id,
-                                            Some(&format!("{}:length:{}", desc, len)),
-                                            record.seq(),
-                                        )
+                                        .write_record(&Record::new(
+                                            definition,
+                                            record.sequence().clone(),
+                                        ))
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }
@@ -87,11 +98,10 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                                 // alt, print less than
                                 if len < length {
                                     writer
-                                        .write(
-                                            id,
-                                            Some(&format!("{}:length:{}", desc, len)),
-                                            record.seq(),
-                                        )
+                                        .write_record(&Record::new(
+                                            definition,
+                                            record.sequence().clone(),
+                                        ))
                                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                                 }
                             }

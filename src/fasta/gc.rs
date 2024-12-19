@@ -1,8 +1,9 @@
-use crate::utils::{error, stdin};
+use crate::{
+    utils::{error, stdin},
+    FID,
+};
 use anyhow::{bail, Result};
-use bio::io::fasta;
-use bio::seq_analysis::gc::gc_content;
-use std::io;
+use std::borrow::Borrow;
 
 pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
@@ -13,25 +14,30 @@ pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
             for el in f.iter() {
                 let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el)?;
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
                     let record = record?;
-                    let id = record.id();
-                    let gc = gc_content(record.seq());
+                    let id = crate::fasta_id_description(&record, FID::Id)?;
+                    let description = crate::fasta_id_description(&record, FID::Description)?;
+                    let gc = gc_content(record.sequence().as_ref());
                     // write to stdout
-                    println!("{}\t{}\t{}", basename, id, gc);
+                    println!("{}\t{}\t{}\t{}", basename, id, description, gc);
                 }
             }
         }
         // read from stdin
         None => match stdin::is_stdin() {
             true => {
-                let mut records = fasta::Reader::new(io::stdin()).records();
+                let mut reader = crate::fasta_reader_stdin();
+
+                let mut records = reader.records();
                 while let Some(Ok(record)) = records.next() {
-                    let id = record.id();
-                    let gc = gc_content(record.seq());
+                    let id = String::from_utf8(record.name().to_vec())?;
+                    let description =
+                        String::from_utf8(record.description().unwrap_or(&[]).to_vec())?;
+                    let gc = gc_content(record.sequence().as_ref());
                     // write to stdout
-                    println!("{}\t{}", id, gc);
+                    println!("{}\t{}\t{}", id, description, gc);
                 }
             }
             false => {
@@ -40,4 +46,15 @@ pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
         },
     }
     Ok(())
+}
+
+// see https://github.com/rust-bio/rust-bio/blob/master/src/seq_analysis/gc.rs
+fn gc_content<C: Borrow<u8>, T: IntoIterator<Item = C>>(sequence: T) -> f32 {
+    let (l, count) = sequence
+        .into_iter()
+        .fold((0usize, 0usize), |(l, count), n| match *n.borrow() {
+            b'c' | b'g' | b'G' | b'C' => (l + 1, count + 1),
+            _ => (l + 1, count),
+        });
+    count as f32 / l as f32
 }

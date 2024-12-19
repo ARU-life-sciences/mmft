@@ -1,6 +1,10 @@
 use crate::utils::{error, lex_min::lex_min, stdin};
 use anyhow::{bail, Result};
-use bio::io::fasta;
+use noodles_fasta::{
+    self as fasta,
+    record::{Definition, Sequence},
+    Record,
+};
 use std::io;
 
 pub fn min(matches: &clap::ArgMatches) -> Result<()> {
@@ -11,13 +15,19 @@ pub fn min(matches: &clap::ArgMatches) -> Result<()> {
         // read directly from files
         Some(f) => {
             for el in f.iter() {
-                let reader = fasta::Reader::from_file(el)?;
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
                     let record = record?;
-                    let id = record.id();
-                    let minimal_rotation = lex_min(record.seq())?;
+                    let minimal_rotation = lex_min(record.sequence().as_ref())?;
+
+                    let definition =
+                        Definition::new(record.name(), record.description().map(Into::into));
+                    let out_record = Record::new(
+                        definition,
+                        Sequence::from(minimal_rotation.as_bytes().to_vec()),
+                    );
                     writer
-                        .write(id, Some("lex_min"), minimal_rotation.as_bytes())
+                        .write_record(&out_record)
                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                 }
             }
@@ -25,12 +35,18 @@ pub fn min(matches: &clap::ArgMatches) -> Result<()> {
         // read from stdin
         None => match stdin::is_stdin() {
             true => {
-                let mut records = fasta::Reader::new(io::stdin()).records();
+                let mut reader = crate::fasta_reader_stdin();
+                let mut records = reader.records();
                 while let Some(Ok(record)) = records.next() {
-                    let id = record.id();
-                    let minimal_rotation = lex_min(record.seq())?;
+                    let minimal_rotation = lex_min(record.sequence().as_ref())?;
+                    let definition =
+                        Definition::new(record.name(), record.description().map(Into::into));
+                    let out_record = Record::new(
+                        definition,
+                        Sequence::from(minimal_rotation.as_bytes().to_vec()),
+                    );
                     writer
-                        .write(id, Some("lex_min"), minimal_rotation.as_bytes())
+                        .write_record(&out_record)
                         .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                 }
             }

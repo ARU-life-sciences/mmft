@@ -1,6 +1,6 @@
 use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
-use bio::io::fasta;
+use noodles_fasta as fasta;
 use std::fs;
 use std::path::PathBuf;
 
@@ -25,14 +25,18 @@ pub fn split_fasta(matches: &clap::ArgMatches) -> Result<()> {
                     .unwrap_or(&basename);
 
                 // have to iterate over the file first to get the total number of reads
-                let mut reader = fasta::Reader::from_file(el)?.records();
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
+                let mut records = reader.records();
                 let mut nb_reads = 0;
-                while let Some(Ok(_)) = reader.next() {
+                while let Some(Ok(_)) = records.next() {
                     nb_reads += 1;
                 }
+                drop(records);
                 // now I want to split the file in a number of files where each file
                 // has at most `split_number` reads
-                let mut reader = fasta::Reader::from_file(el)?.records();
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
+                let mut records = reader.records();
+
                 let chunk_number = (nb_reads as f64 / split_number as f64).floor() as usize;
                 let mut chunk_iter: Vec<i32> = (0..chunk_number).map(|_| split_number).collect();
                 if nb_reads % split_number != 0 {
@@ -46,7 +50,7 @@ pub fn split_fasta(matches: &clap::ArgMatches) -> Result<()> {
                         fs::File::create(dir.join(format!("{}_chunk_{}.fa", basename, i)))?;
                     let mut writer = fasta::Writer::new(chunk_file);
                     for _ in 0..*chunk {
-                        if let Some(Ok(record)) = reader.next() {
+                        if let Some(Ok(record)) = records.next() {
                             writer.write_record(&record)?;
                         }
                     }

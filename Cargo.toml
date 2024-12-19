@@ -1,6 +1,6 @@
 [package]
 name = "mmft"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Max Brown <max.carter-brown@aru.ac.uk>"]
 edition = "2021"
 license = "MIT"
@@ -12,14 +12,15 @@ documentation = "https://github.com/tolkit/mmft"
 repository = "https://github.com/tolkit/mmft"
 
 [dependencies]
-bio = "2.0.3"
+noodles-fasta = "0.46.0"
 atty = "0.2.14"
-thiserror = "2.0.3"
-anyhow = "1.0.93"
+thiserror = "2.0.8"
+anyhow = "1.0.94"
 regex = "1.11.1"
-rand = "0.9.0-alpha.2"
-clap = { version = "4.5.21", features = ["cargo"] }
+rand = "0.9.0-beta.1"
+clap = { version = "4.5.23", features = ["cargo"] }
 lexical-sort = "0.3.1"
+noodles-core = "0.15.0"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]

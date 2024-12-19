@@ -1,6 +1,6 @@
 use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
-use bio::io::fasta;
+use noodles_fasta as fasta;
 use regex::Regex;
 use std::io;
 
@@ -11,19 +11,7 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
         .expect("required by clap");
     let inverse: bool = matches.get_flag("inverse");
 
-    let re = Regex::new(re_str);
-
-    let re = match re {
-        Ok(r) => r,
-        Err(e) => {
-            let err = format!(
-                "{}\nError: [-]\tActual error: {}",
-                error::RegexError::CouldNotCompile,
-                e
-            );
-            bail!(err)
-        }
-    };
+    let re = Regex::new(re_str)?;
 
     // writer here?
     let mut writer = fasta::Writer::new(io::stdout());
@@ -32,37 +20,24 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
         // read directly from files
         Some(f) => {
             for el in f.iter() {
-                let basename = crate::get_basename_from_pathbuf(el)?;
-
-                let reader = fasta::Reader::from_file(el)?;
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
                     let record = record?;
-                    let id = record.id();
-                    let description = record.desc().unwrap_or("");
-
-                    let id_desc = format!("{} {}", id, description);
+                    let id_desc = record.definition().to_string();
 
                     // if there is no match, we want to have
                     // the option to print
                     if re.is_match(&id_desc) {
                         if !inverse {
                             writer
-                                .write(
-                                    id,
-                                    Some(&format!("{} - {}", description, basename)),
-                                    record.seq(),
-                                )
+                                .write_record(&record)
                                 .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                         } else {
                             continue;
                         }
                     } else if inverse {
                         writer
-                            .write(
-                                id,
-                                Some(&format!("{} - {}", description, basename)),
-                                record.seq(),
-                            )
+                            .write_record(&record)
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                     }
                 }
@@ -71,24 +46,22 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
         // read from stdin
         None => match stdin::is_stdin() {
             true => {
-                let mut records = fasta::Reader::new(io::stdin()).records();
+                let mut reader = crate::fasta_reader_stdin();
+                let mut records = reader.records();
                 while let Some(Ok(record)) = records.next() {
-                    let id = record.id();
-                    let description = record.desc().unwrap_or("");
-
-                    let id_desc = format!("{} {}", id, description);
+                    let id_desc = record.definition().to_string();
 
                     if re.is_match(&id_desc) {
                         if !inverse {
                             writer
-                                .write(id, Some(description), record.seq())
+                                .write_record(&record)
                                 .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                         } else {
                             continue;
                         }
                     } else if inverse {
                         writer
-                            .write(id, Some(description), record.seq())
+                            .write_record(&record)
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                     }
                 }

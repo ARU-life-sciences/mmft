@@ -1,6 +1,6 @@
 use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
-use bio::io::fasta;
+use noodles_fasta::{self as fasta, record::Definition};
 use std::io;
 use std::path::Path;
 use std::{
@@ -30,14 +30,22 @@ pub fn filter_sequences(matches: &clap::ArgMatches) -> Result<()> {
             for el in f.iter() {
                 let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el)?;
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
                     let record = record?;
-                    let id = record.id();
 
+                    let id = String::from_utf8(record.name().to_vec())?;
                     if ids.contains(&id.to_owned()) {
+                        let description = record
+                            .description()
+                            .map(|d| basename.clone() + std::str::from_utf8(d).unwrap())
+                            .map(|e| e.into_bytes());
+                        let definition = Definition::new(id, description);
+
+                        let record = fasta::Record::new(definition, record.sequence().to_owned());
+
                         writer
-                            .write(id, Some(&basename), record.seq())
+                            .write_record(&record)
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                     }
                 }
@@ -46,12 +54,14 @@ pub fn filter_sequences(matches: &clap::ArgMatches) -> Result<()> {
         // read from stdin
         None => match stdin::is_stdin() {
             true => {
-                let mut records = fasta::Reader::new(io::stdin()).records();
+                let mut records = fasta::io::Reader::new(BufReader::new(io::stdin()));
+
+                let mut records = records.records();
                 while let Some(Ok(record)) = records.next() {
-                    let id = record.id();
+                    let id = String::from_utf8(record.name().to_vec())?;
                     if ids.contains(&id.to_owned()) {
                         writer
-                            .write(id, None, record.seq())
+                            .write_record(&record)
                             .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
                     }
                 }

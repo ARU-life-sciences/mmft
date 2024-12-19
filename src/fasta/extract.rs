@@ -1,6 +1,14 @@
-use crate::utils::{error, parse::parse_region, stdin};
+use crate::{
+    utils::{error, parse::parse_region, stdin},
+    FID,
+};
 use anyhow::{bail, Result};
-use bio::io::fasta;
+use noodles_core::Position;
+use noodles_fasta::{
+    self as fasta,
+    record::{Definition, Sequence},
+    Record,
+};
 use std::io;
 
 pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
@@ -12,7 +20,7 @@ pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
     let parsed_region = parse_region(region)?;
 
     // writer here?
-    let mut writer = fasta::Writer::new(io::stdout());
+    let mut writer = fasta::io::Writer::new(io::stdout());
 
     match input_file {
         // read directly from files
@@ -20,42 +28,30 @@ pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
             for el in f.iter() {
                 let basename = crate::get_basename_from_pathbuf(el)?;
 
-                let reader = fasta::Reader::from_file(el)?;
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
-                    let record = record?;
-                    let id = record.id();
-                    let seq = record.seq().get(parsed_region[0]..parsed_region[1]);
-
-                    let seq_res = match seq {
-                        Some(s) => s,
-                        None => bail!(error::RegionError::SeqExtractError),
-                    };
-                    // write to stdout
-                    let description =
-                        format!("{}: {}-{}", basename, parsed_region[0], parsed_region[1]);
-                    writer
-                        .write(id, Some(&description), seq_res)
-                        .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                    extract_inner(
+                        &record?,
+                        parsed_region.clone(),
+                        basename.clone(),
+                        &mut writer,
+                    )?;
                 }
             }
         }
         // read from stdin
         None => match stdin::is_stdin() {
             true => {
-                let mut records = fasta::Reader::new(io::stdin()).records();
-                while let Some(Ok(record)) = records.next() {
-                    let id = record.id();
-                    let seq = record.seq().get(parsed_region[0]..parsed_region[1]);
+                let mut records = crate::fasta_reader_stdin();
 
-                    let seq_res = match seq {
-                        Some(s) => s,
-                        None => bail!(error::RegionError::SeqExtractError),
-                    };
-                    // write to stdout
-                    let description = format!("{}-{}", parsed_region[0], parsed_region[1]);
-                    writer
-                        .write(id, Some(&description), seq_res)
-                        .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
+                let mut records = records.records();
+                while let Some(Ok(record)) = records.next() {
+                    extract_inner(
+                        &record,
+                        parsed_region.clone(),
+                        "stdin".to_string(),
+                        &mut writer,
+                    )?;
                 }
             }
             false => {
@@ -63,5 +59,40 @@ pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
             }
         },
     }
+    Ok(())
+}
+
+fn extract_inner(
+    record: &Record,
+    parsed_region: Vec<usize>,
+    basename: String,
+    writer: &mut fasta::io::Writer<io::Stdout>,
+) -> Result<()> {
+    let id = crate::fasta_id_description(&record, FID::Id)?;
+    let description = crate::fasta_id_description(&record, FID::Description)?;
+
+    let start = Position::try_from(parsed_region[0])?;
+    let end = Position::try_from(parsed_region[1])?;
+
+    let seq = record.sequence().get(start..end);
+
+    let seq_res = match seq {
+        Some(s) => s,
+        None => bail!(error::RegionError::SeqExtractError),
+    };
+    // write to stdout
+    let description = format!(
+        "{}:{}:{}-{}",
+        description, basename, parsed_region[0], parsed_region[1]
+    );
+
+    let definition = Definition::new(id, Some(description.into_bytes()));
+
+    let record = fasta::Record::new(definition, Sequence::from(seq_res.to_vec()));
+
+    let _ = writer
+        .write_record(&record)
+        .map_err(|_| error::FastaWriteError::CouldNotWrite);
+
     Ok(())
 }

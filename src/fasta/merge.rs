@@ -1,7 +1,5 @@
 use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
-use bio::io::fasta;
-use std::io;
 
 pub fn merge_fastas(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
@@ -16,15 +14,11 @@ pub fn merge_fastas(matches: &clap::ArgMatches) -> Result<()> {
                 None => println!(">merged"),
             }
             for el in f {
-                let reader = fasta::Reader::from_file(el)?;
+                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
                     let record = record?;
-                    let seq = std::str::from_utf8(record.seq());
                     // write to stdout
-                    match seq {
-                        Ok(s) => print!("{}", s),
-                        Err(_) => bail!(error::UTF8FormatError::NotUTF8),
-                    }
+                    print!("{}", std::str::from_utf8(record.sequence().as_ref())?);
                 }
             }
             println!();
@@ -37,14 +31,10 @@ pub fn merge_fastas(matches: &clap::ArgMatches) -> Result<()> {
                     Some(h) => println!(">{}", h),
                     None => println!(">merged"),
                 }
-                let mut records = fasta::Reader::new(io::stdin()).records();
+                let mut reader = crate::fasta_reader_stdin();
+                let mut records = reader.records();
                 while let Some(Ok(record)) = records.next() {
-                    let seq = std::str::from_utf8(record.seq());
-                    // write to stdout
-                    match seq {
-                        Ok(s) => print!("{}", s),
-                        Err(_) => bail!(error::UTF8FormatError::NotUTF8),
-                    }
+                    print!("{}", std::str::from_utf8(record.sequence().as_ref())?);
                 }
                 println!();
             }

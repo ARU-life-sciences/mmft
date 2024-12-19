@@ -1,8 +1,8 @@
-use crate::utils::{error, stdin};
+use crate::FID;
 use anyhow::{bail, Result};
-use bio::io::fasta;
-use rand::prelude::SliceRandom;
-use std::io::{self, BufRead};
+use noodles_fasta as fasta;
+use rand::Rng;
+use std::io;
 
 pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
@@ -10,149 +10,92 @@ pub fn sample(matches: &clap::ArgMatches) -> Result<()> {
     let sample_size = matches
         .get_one::<String>("sample-size")
         .map(|s| parse_size(s))
-        .transpose()?; // Convert to an optional Result
+        .transpose()?;
 
     let mut writer = fasta::Writer::new(io::stdout());
-    let mut total_sampled_size = 0;
 
     match input_file {
         Some(f) => {
-            let mut total_records = 0;
-            for el in f.clone() {
-                let reader = fasta::Reader::from_file(el)?;
-                for _ in reader.records() {
-                    total_records += 1;
-                }
-            }
-
-            if let Some(num) = sample_number {
-                if num > total_records {
-                    bail!(
-                        "[-]\tSample number ({}) cannot be greater than total number of records ({}).",
-                        num,
-                        total_records
-                    );
-                }
-            }
-
             for el in f {
-                let reader = fasta::Reader::from_file(el)?;
-                let records = reader.records();
-
-                let mut numbers: Vec<usize> = (0..total_records as usize).collect();
-                numbers.shuffle(&mut rand::thread_rng());
-                let mut usable_numbers = match sample_number {
-                    Some(num) => numbers[0..(num as usize)].to_vec(),
-                    None => numbers, // Sample all if no limit
-                };
-                usable_numbers.sort();
-
-                for (inner_index, record) in records.enumerate() {
-                    if total_sampled_size >= sample_size.unwrap_or(usize::MAX) {
-                        break;
+                if let Some(sn) = sample_number {
+                    let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
+                    let mut total_records = 0;
+                    for result in reader.records() {
+                        let _ = result?;
+                        total_records += 1;
                     }
 
-                    let inner_record = record?;
-                    let first_random_index = match usable_numbers.first() {
-                        Some(i) => i,
-                        None => continue,
-                    };
+                    if sn > total_records {
+                        bail!("Sample number is greater than total records.");
+                    }
 
-                    if inner_index == *first_random_index {
-                        let seq_size = inner_record.seq().len() + inner_record.id().len();
-                        if total_sampled_size + seq_size > sample_size.unwrap_or(usize::MAX) {
-                            break;
+                    let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
+                    let mut remaining_to_sample = sn;
+                    let mut remaining_in_file = total_records;
+
+                    let mut rng = rand::thread_rng();
+
+                    for result in reader.records() {
+                        let record = result?;
+
+                        let prob = remaining_to_sample as f64 / remaining_in_file as f64;
+                        if rng.gen_bool(prob) {
+                            // Write the record if selected
+                            writer.write_record(&record)?;
+                            remaining_to_sample -= 1;
+
+                            // Stop early if we've sampled enough
+                            if remaining_to_sample == 0 {
+                                break;
+                            }
+                        }
+                        remaining_in_file -= 1;
+                    }
+                }
+
+                // else do sample size
+                if let Some(ss) = sample_size {
+                    let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
+                    let mut total_records = 0;
+                    for result in reader.records() {
+                        let _ = result?;
+                        total_records += 1;
+                    }
+
+                    let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
+                    let mut rng = rand::thread_rng();
+                    let mut total_bytes_written: usize = 0;
+                    let mut remaining_records = total_records;
+
+                    for result in reader.records() {
+                        let record = result?;
+
+                        // Approximate the size of the current record in bytes
+                        let record_bytes =
+                            crate::fasta_id_description(&record, FID::Both("".into()))?.len()
+                                + record.sequence().len()
+                                + 2; // ID + sequence + newlines
+
+                        // Calculate dynamic sampling probability
+                        let prob = (ss - total_bytes_written) as f64
+                            / (record_bytes as f64 * remaining_records as f64);
+
+                        // Randomly decide whether to include this record
+                        if rng.gen_bool(prob.clamp(0.0, 1.0)) {
+                            if total_bytes_written + record_bytes > ss {
+                                break; // Stop if adding this record would exceed the byte limit
+                            }
+
+                            writer.write_record(&record)?;
+                            total_bytes_written += record_bytes;
                         }
 
-                        writer
-                            .write(
-                                inner_record.id(),
-                                Some(inner_record.desc().unwrap_or("")),
-                                inner_record.seq(),
-                            )
-                            .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
-
-                        total_sampled_size += seq_size;
-                        usable_numbers.remove(0);
+                        remaining_records -= 1; // Decrease the number of records remaining to process
                     }
                 }
             }
         }
-        None => match stdin::is_stdin() {
-            true => {
-                let mut total_records = 0;
-                let stdin = io::stdin();
-                let mut handle = stdin.lock();
-                let mut stdin_fasta = String::new();
-                let mut eof = false;
-
-                while !eof {
-                    match handle.read_line(&mut stdin_fasta) {
-                        Ok(0) => eof = true,
-                        Ok(_) => {}
-                        Err(_) => bail!("[-]\tError reading from stdin."),
-                    }
-                }
-
-                let fasta_reader = fasta::Reader::new(stdin_fasta.as_bytes());
-
-                for _ in fasta_reader.records() {
-                    total_records += 1;
-                }
-
-                if let Some(num) = sample_number {
-                    if num > total_records {
-                        bail!(
-                            "[-]\tSample number ({}) cannot be greater than total number of records ({}).",
-                            num,
-                            total_records
-                        );
-                    }
-                }
-
-                let reader = fasta::Reader::new(stdin_fasta.as_bytes());
-                let records = reader.records();
-
-                let mut numbers: Vec<usize> = (0..total_records as usize).collect();
-                numbers.shuffle(&mut rand::thread_rng());
-                let mut usable_numbers = match sample_number {
-                    Some(num) => numbers[0..(num as usize)].to_vec(),
-                    None => numbers,
-                };
-                usable_numbers.sort();
-
-                for (inner_index, record) in records.enumerate() {
-                    if total_sampled_size >= sample_size.unwrap_or(usize::MAX) {
-                        break;
-                    }
-
-                    let inner_record = record?;
-                    let first_random_index = match usable_numbers.first() {
-                        Some(i) => i,
-                        None => continue,
-                    };
-
-                    if inner_index == *first_random_index {
-                        let seq_size = inner_record.seq().len() + inner_record.id().len();
-                        if total_sampled_size + seq_size > sample_size.unwrap_or(usize::MAX) {
-                            break;
-                        }
-
-                        writer
-                            .write(
-                                inner_record.id(),
-                                Some(inner_record.desc().unwrap_or("")),
-                                inner_record.seq(),
-                            )
-                            .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
-
-                        total_sampled_size += seq_size;
-                        usable_numbers.remove(0);
-                    }
-                }
-            }
-            false => bail!(error::StdinError::NoSequence),
-        },
+        None => bail!("STDIN not supported for this command."),
     }
     Ok(())
 }
@@ -171,7 +114,7 @@ fn parse_size(size: &str) -> Result<usize> {
     } else if let Some(num) = size.strip_suffix("kb").or_else(|| size.strip_suffix("Kb")) {
         num.parse::<f64>()
             .map(|n| n * 1_000f64)
-            .map_err(|_| anyhow::anyhow!("Invalid size fohmat"))
+            .map_err(|_| anyhow::anyhow!("Invalid size format"))
     } else if let Some(num) = size.strip_suffix('B').or_else(|| size.strip_suffix('b')) {
         num.parse::<f64>()
             .map_err(|_| anyhow::anyhow!("Invalid size format"))
