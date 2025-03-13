@@ -142,6 +142,13 @@ fn main() -> Result<()> {
                         .help("Input fasta file path(s)."),
                 )
                 .arg(
+                    Arg::new("track")
+                        .long("track")
+                        .short('t')
+                        .action(ArgAction::SetTrue)
+                        .help("Keep track of record indexes in fasta header")
+                )
+                .arg(
                     Arg::new("header")
                         .long("header")
                         .num_args(1)
