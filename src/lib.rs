@@ -15,7 +15,10 @@ pub(crate) fn get_fasta_files(matches: &clap::ArgMatches) -> Option<Vec<PathBuf>
 
 pub(crate) fn get_basename_from_pathbuf(pb: &Path) -> Result<String> {
     match pb.file_name() {
-        Some(f) => Ok(f.to_str().unwrap().to_owned()),
+        Some(f) => match f.to_str() {
+            Some(s) => Ok(s.to_owned()),
+            None => bail!("File name '{}' is not valid UTF-8", f.to_string_lossy()),
+        },
         None => bail!("Could not find file"),
     }
 }

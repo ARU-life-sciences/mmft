@@ -1,28 +1,27 @@
 // Reverse complement a string slice.
 pub fn reverse_complement(dna: &[u8]) -> Vec<u8> {
-    let dna_vec = dna.to_vec();
-    let mut revcomp = Vec::new();
+    static COMPLEMENT: [u8; 256] = make_complement_table();
 
-    for base in dna_vec.iter() {
-        revcomp.push(switch_base(*base))
-    }
-    revcomp.as_mut_slice().reverse();
-    revcomp
+    dna.iter()
+        .rev()
+        .map(|&base| COMPLEMENT[base as usize])
+        .collect()
 }
 
-// Used in `reverse_complement` to switch to a complementary base.
-fn switch_base(c: u8) -> u8 {
-    match c {
-        b'A' => b'T',
-        b'a' => b't',
-        b'C' => b'G',
-        b'c' => b'g',
-        b'T' => b'A',
-        b't' => b'a',
-        b'G' => b'C',
-        b'g' => b'c',
-        b'N' => b'N',
-        b'n' => b'n',
-        _ => b'N',
-    }
+// Const function to generate the complement lookup table at compile time.
+// Anything that isn't a recognised base maps to 'N', matching the previous
+// match-based implementation's fallback.
+const fn make_complement_table() -> [u8; 256] {
+    let mut table = [b'N'; 256];
+    table[b'A' as usize] = b'T';
+    table[b'T' as usize] = b'A';
+    table[b'C' as usize] = b'G';
+    table[b'G' as usize] = b'C';
+    table[b'a' as usize] = b't';
+    table[b't' as usize] = b'a';
+    table[b'c' as usize] = b'g';
+    table[b'g' as usize] = b'c';
+    table[b'N' as usize] = b'N';
+    table[b'n' as usize] = b'n';
+    table
 }

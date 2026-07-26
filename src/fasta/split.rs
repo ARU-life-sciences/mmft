@@ -2,6 +2,7 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use noodles_fasta as fasta;
 use std::fs;
+use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
 pub fn split_fasta(matches: &clap::ArgMatches) -> Result<()> {
@@ -11,6 +12,11 @@ pub fn split_fasta(matches: &clap::ArgMatches) -> Result<()> {
         .get_one::<PathBuf>("dir")
         .cloned()
         .expect("defaulted by clap");
+
+    if split_number <= 0 {
+        bail!("Number of records per file must be greater than zero.");
+    }
+    let split_number = split_number as usize;
 
     match input_file {
         // read directly from files
@@ -24,36 +30,36 @@ pub fn split_fasta(matches: &clap::ArgMatches) -> Result<()> {
                     .strip_suffix(".fa")
                     .unwrap_or(&basename);
 
-                // have to iterate over the file first to get the total number of reads
+                // single pass: roll over to a new chunk file every
+                // `split_number` records, instead of reading the whole file
+                // once to count records and then again to write them out
                 let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
-                let mut records = reader.records();
-                let mut nb_reads = 0;
-                while let Some(Ok(_)) = records.next() {
-                    nb_reads += 1;
-                }
-                drop(records);
-                // now I want to split the file in a number of files where each file
-                // has at most `split_number` reads
-                let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
-                let mut records = reader.records();
+                let mut chunk_index = 0usize;
+                let mut count_in_chunk = 0usize;
+                let mut writer: Option<fasta::Writer<BufWriter<fs::File>>> = None;
 
-                let chunk_number = (nb_reads as f64 / split_number as f64).floor() as usize;
-                let mut chunk_iter: Vec<i32> = (0..chunk_number).map(|_| split_number).collect();
-                if nb_reads % split_number != 0 {
-                    chunk_iter.push(nb_reads - (split_number * chunk_number as i32));
-                }
+                for record in reader.records() {
+                    let record = record?;
 
-                // now we can iterate over the chunks, create a new fasta writer in each
-                // iteration, and write the number of records specified by the chunk_iter to it
-                for (i, chunk) in chunk_iter.iter().enumerate() {
-                    let chunk_file =
-                        fs::File::create(dir.join(format!("{}_chunk_{}.fa", basename, i)))?;
-                    let mut writer = fasta::Writer::new(chunk_file);
-                    for _ in 0..*chunk {
-                        if let Some(Ok(record)) = records.next() {
-                            writer.write_record(&record)?;
-                        }
+                    if writer.is_none() {
+                        let chunk_file = fs::File::create(
+                            dir.join(format!("{}_chunk_{}.fa", basename, chunk_index)),
+                        )?;
+                        writer = Some(fasta::Writer::new(BufWriter::new(chunk_file)));
                     }
+
+                    writer.as_mut().unwrap().write_record(&record)?;
+                    count_in_chunk += 1;
+
+                    if count_in_chunk == split_number {
+                        writer.take().unwrap().get_mut().flush()?;
+                        chunk_index += 1;
+                        count_in_chunk = 0;
+                    }
+                }
+
+                if let Some(mut w) = writer {
+                    w.get_mut().flush()?;
                 }
             }
         }

@@ -3,9 +3,9 @@ use anyhow::{bail, Result};
 use noodles_fasta::record::Definition;
 use noodles_fasta::{self as fasta, Record};
 use std::fmt;
-use std::io;
+use std::io::{self, BufWriter, Write};
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 enum Orientation {
     Forward,
     Reverse,
@@ -23,7 +23,7 @@ impl fmt::Display for Orientation {
 pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
 
-    let mut writer = fasta::Writer::new(io::stdout());
+    let mut writer = fasta::Writer::new(BufWriter::new(io::stdout()));
 
     match input_file {
         // read directly from files
@@ -31,13 +31,7 @@ pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
             for el in f.iter() {
                 let mut reader = crate::fasta_reader_file(el.to_path_buf())?;
                 for record in reader.records() {
-                    // now we iterate over forward/reverse
-                    let r = record?.clone();
-                    for strand in [Orientation::Forward, Orientation::Reverse] {
-                        for skip in 0..=2 {
-                            translate_inner(strand.clone(), skip, &r, &mut writer)?;
-                        }
-                    }
+                    translate_all_frames(&record?, &mut writer)?;
                 }
             }
         }
@@ -47,13 +41,7 @@ pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
                 let mut reader = crate::fasta_reader_stdin();
                 let mut records = reader.records();
                 while let Some(Ok(record)) = records.next() {
-                    // now we iterate over forward/reverse
-                    let r = record.clone();
-                    for strand in [Orientation::Forward, Orientation::Reverse] {
-                        for skip in 0..=2 {
-                            translate_inner(strand.clone(), skip, &r, &mut writer)?;
-                        }
-                    }
+                    translate_all_frames(&record, &mut writer)?;
                 }
             }
             false => {
@@ -61,21 +49,35 @@ pub fn six_frame_translate(matches: &clap::ArgMatches) -> Result<()> {
             }
         },
     }
+    writer.get_mut().flush()?;
     Ok(())
 }
 
-fn translate_inner(
+// Translates all six frames (3 forward skips, 3 reverse skips) for a single
+// record. The reverse complement of the sequence is computed once here and
+// reused for all three reverse-strand skips, rather than being recomputed
+// from scratch for each one.
+fn translate_all_frames<W: Write>(r: &Record, writer: &mut fasta::Writer<W>) -> Result<()> {
+    let forward = r.sequence().as_ref();
+    let reverse = revcomp::reverse_complement(forward);
+
+    for skip in 0..=2 {
+        translate_inner(Orientation::Forward, skip, r, &forward[skip..], writer)?;
+    }
+    for skip in 0..=2 {
+        translate_inner(Orientation::Reverse, skip, r, &reverse[skip..], writer)?;
+    }
+
+    Ok(())
+}
+
+fn translate_inner<W: Write>(
     strand: Orientation,
     skip: usize,
     r: &Record,
-    writer: &mut fasta::Writer<io::Stdout>,
+    seq: &[u8],
+    writer: &mut fasta::Writer<W>,
 ) -> Result<()> {
-    // skip the appropriate amount in the sequence
-    let seq = match strand {
-        Orientation::Forward => &r.sequence().as_ref()[skip..],
-        Orientation::Reverse => &revcomp::reverse_complement(r.sequence().as_ref())[skip..],
-    };
-
     let definition = Definition::new(
         r.name(),
         r.description().map(|s| {
@@ -92,9 +94,9 @@ fn translate_inner(
 
     let record = Record::new(definition, translate::translate(seq).into());
 
-    let _ = writer
+    writer
         .write_record(&record)
-        .map_err(|_| error::FastaWriteError::CouldNotWrite);
+        .map_err(|_| error::FastaWriteError::CouldNotWrite)?;
 
     Ok(())
 }

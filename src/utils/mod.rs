@@ -4,3 +4,4 @@ pub mod parse;
 pub mod revcomp;
 pub mod stdin;
 pub mod translate;
+pub mod wrap;

@@ -4,9 +4,11 @@ use crate::{
 };
 use anyhow::{bail, Result};
 use std::borrow::Borrow;
+use std::io::{self, BufWriter, Write};
 
 pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
+    let mut out = BufWriter::new(io::stdout());
 
     match input_file {
         // read directly from files
@@ -21,7 +23,7 @@ pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
                     let description = crate::fasta_id_description(&record, FID::Description)?;
                     let gc = gc_content(record.sequence().as_ref());
                     // write to stdout
-                    println!("{}\t{}\t{}\t{}", basename, id, description, gc);
+                    writeln!(out, "{}\t{}\t{}\t{}", basename, id, description, gc)?;
                 }
             }
         }
@@ -37,7 +39,7 @@ pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
                         String::from_utf8(record.description().unwrap_or(&[]).to_vec())?;
                     let gc = gc_content(record.sequence().as_ref());
                     // write to stdout
-                    println!("{}\t{}\t{}", id, description, gc);
+                    writeln!(out, "{}\t{}\t{}", id, description, gc)?;
                 }
             }
             false => {
@@ -45,6 +47,7 @@ pub fn get_gc(matches: &clap::ArgMatches) -> Result<()> {
             }
         },
     }
+    out.flush()?;
     Ok(())
 }
 
@@ -56,5 +59,9 @@ fn gc_content<C: Borrow<u8>, T: IntoIterator<Item = C>>(sequence: T) -> f32 {
             b'c' | b'g' | b'G' | b'C' => (l + 1, count + 1),
             _ => (l + 1, count),
         });
-    count as f32 / l as f32
+    if l == 0 {
+        0.0
+    } else {
+        count as f32 / l as f32
+    }
 }

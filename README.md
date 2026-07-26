@@ -18,6 +18,9 @@ Commands are added only as and when I need them. If you like what you see, pleas
 - `mmft num <fasta(s)>` or `cat <fasta(s)> | mmft num`. Calculates number of sequences, and total number of base pairs in the fasta file input(s).
 - `mmft revcomp <fasta(s)>` or `cat <fasta(s) | mmft revcomp`. Reverse complements each record in the fasta file.
 - `mmft min <fasta(s)>` or `cat <fasta(s) | mmft min`. Minimally lexicographically rotated string returned. Takes into account reverse complement too.
+- `mmft stats <fasta(s)>` or `cat <fasta(s)> | mmft stats`. Per-file assembly statistics in one pass: sequence count, total bp, GC%, N%, min/max length, N50/L50, and auN (area under the Nx curve).
+- `mmft telomere <fasta(s)> (-m <MOTIF>) (-w <WINDOW>)`. Scans the ends of each record for canonical telomere repeat motifs (or a motif you supply), reporting the repeat count found at each end.
+- `mmft skew <fasta(s)> (-w <WINDOW>)`. Calculates GC skew, `(G-C)/(G+C)`, per window along each sequence, along with its cumulative sum (useful for spotting origins/termini of replication in circular genomes).
 
 ### File manipulations
 
@@ -28,7 +31,7 @@ Commands are added only as and when I need them. If you like what you see, pleas
 - `mmft sample <fasta(s)> -n <N>`. Will randomly sample a fasta file (or stream of fasta files) to a specified number of records.
 - `mmft split (-d <DIR>) -n <N> <fasta(s)>`. Splits fasta into equal chunks with the last chunk the remainder if record number not perfectly divisible by chunk number. 
 
-Careful when piping into `mmft` as fasta files are not treated separately, they are treated as a continuum of fasta records. Hence, while `mmft n50 1.fasta 2.fasta` shows the n50 of each fasta file separately, `cat *.fasta | mmft n50` will calculate the n50 of both files combined. In addition, `mmft sample` loads the entire STDIN into memory, so be careful when piping large files. Some functions don't support piping (`filter`, `merge`, `sample`, `split`).
+Careful when piping into `mmft` as fasta files are not treated separately, they are treated as a continuum of fasta records. Hence, while `mmft n50 1.fasta 2.fasta` shows the n50 of each fasta file separately, `cat *.fasta | mmft n50` will calculate the n50 of both files combined. `mmft sample` and `mmft split` don't support piping at all (they need to be able to seek/reopen the input file), and `mmft filter` reads its ID list fully into memory before filtering.
 
 All printed to STDOUT.
 

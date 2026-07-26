@@ -9,7 +9,7 @@ use noodles_fasta::{
     record::{Definition, Sequence},
     Record,
 };
-use std::io;
+use std::io::{self, BufWriter, Write};
 
 pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
@@ -19,8 +19,7 @@ pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
 
     let parsed_region = parse_region(region)?;
 
-    // writer here?
-    let mut writer = fasta::io::Writer::new(io::stdout());
+    let mut writer = fasta::io::Writer::new(BufWriter::new(io::stdout()));
 
     match input_file {
         // read directly from files
@@ -59,6 +58,7 @@ pub fn extract_region(matches: &clap::ArgMatches) -> Result<()> {
             }
         },
     }
+    writer.get_mut().flush()?;
     Ok(())
 }
 
@@ -66,7 +66,7 @@ fn extract_inner(
     record: &Record,
     parsed_region: Vec<usize>,
     basename: String,
-    writer: &mut fasta::io::Writer<io::Stdout>,
+    writer: &mut fasta::io::Writer<BufWriter<io::Stdout>>,
 ) -> Result<()> {
     let id = crate::fasta_id_description(&record, FID::Id)?;
     let description = crate::fasta_id_description(&record, FID::Description)?;

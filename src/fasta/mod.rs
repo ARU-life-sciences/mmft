@@ -9,5 +9,8 @@ pub mod number;
 pub mod regex;
 pub mod reverse;
 pub mod sample;
+pub mod skew;
 pub mod split;
+pub mod stats;
+pub mod telomere;
 pub mod translate;

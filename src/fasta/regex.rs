@@ -2,7 +2,7 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use noodles_fasta as fasta;
 use regex::Regex;
-use std::io;
+use std::io::{self, BufWriter, Write};
 
 pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
@@ -13,8 +13,7 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
 
     let re = Regex::new(re_str)?;
 
-    // writer here?
-    let mut writer = fasta::Writer::new(io::stdout());
+    let mut writer = fasta::Writer::new(BufWriter::new(io::stdout()));
 
     match input_file {
         // read directly from files
@@ -71,5 +70,6 @@ pub fn regex_sequences(matches: &clap::ArgMatches) -> Result<()> {
             }
         },
     }
+    writer.get_mut().flush()?;
     Ok(())
 }

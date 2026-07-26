@@ -5,11 +5,11 @@ use noodles_fasta::{
     record::{Definition, Sequence},
     Record,
 };
-use std::io;
+use std::io::{self, BufWriter, Write};
 
 pub fn min(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
-    let mut writer = fasta::Writer::new(io::stdout());
+    let mut writer = fasta::Writer::new(BufWriter::new(io::stdout()));
 
     match input_file {
         // read directly from files
@@ -55,5 +55,6 @@ pub fn min(matches: &clap::ArgMatches) -> Result<()> {
             }
         },
     }
+    writer.get_mut().flush()?;
     Ok(())
 }

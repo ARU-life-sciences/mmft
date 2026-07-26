@@ -4,12 +4,12 @@ use crate::utils::{error, stdin};
 use anyhow::{bail, Result};
 use clap::ArgMatches;
 use noodles_fasta::{self as fasta, Record};
-use std::io;
+use std::io::{self, BufWriter, Write};
 
 pub fn reverse(matches: &ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
 
-    let mut writer = fasta::Writer::new(io::stdout());
+    let mut writer = fasta::Writer::new(BufWriter::new(io::stdout()));
     match input_file {
         // read directly from files
         Some(f) => {
@@ -45,6 +45,7 @@ pub fn reverse(matches: &ArgMatches) -> Result<()> {
             }
         },
     }
+    writer.get_mut().flush()?;
     Ok(())
 }
 

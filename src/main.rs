@@ -15,7 +15,10 @@ use mmft::fasta::number;
 use mmft::fasta::regex;
 use mmft::fasta::reverse;
 use mmft::fasta::sample;
+use mmft::fasta::skew;
 use mmft::fasta::split;
+use mmft::fasta::stats;
+use mmft::fasta::telomere;
 use mmft::fasta::translate;
 
 fn main() -> Result<()> {
@@ -143,11 +146,17 @@ fn main() -> Result<()> {
                 )
                 .arg(
                     Arg::new("track")
-                        .long("track")
                         .short('t')
+                        .long("track")
                         .action(ArgAction::SetTrue)
                         .help("Keep track of record indexes in fasta header")
                 )
+                .arg(Arg::new("pad")
+                        .short('p')
+                        .long("pad")
+                        .help("Number of N's to insert between merged contigs")
+                        .value_parser(clap::value_parser!(usize))
+                        .default_value("0"))
                 .arg(
                     Arg::new("header")
                         .long("header")
@@ -266,6 +275,70 @@ fn main() -> Result<()> {
 
                 )
         )
+        .subcommand(
+            Command::new("stats")
+                .about("Aggregate per-file assembly statistics (n_seqs, total_bp, GC%, N%, N50/L50, auN) in a single pass.")
+                .arg(
+                    Arg::new("fasta")
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
+                        .help("Input fasta file path(s)."),
+                ),
+        )
+        .subcommand(
+            Command::new("telomere")
+                .about("Scan contig ends for canonical telomere repeat motifs.")
+                .arg(
+                    Arg::new("fasta")
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::new("motif")
+                        .short('m')
+                        .long("motif")
+                        .num_args(1)
+                        .required(false)
+                        .help("Telomere repeat motif to search for (e.g. TTAGGG). Defaults to trying a built-in set of known eukaryotic motifs."),
+                )
+                .arg(
+                    Arg::new("window")
+                        .short('w')
+                        .long("window")
+                        .value_parser(value_parser!(usize))
+                        .num_args(1)
+                        .required(false)
+                        .help("Number of bases from each end of the contig to search. Default 10000."),
+                )
+                .arg(
+                    Arg::new("min-repeats")
+                        .long("min-repeats")
+                        .value_parser(value_parser!(usize))
+                        .num_args(1)
+                        .required(false)
+                        .help("Minimum number of consecutive repeat units required to report a match. Default 3."),
+                ),
+        )
+        .subcommand(
+            Command::new("skew")
+                .about("Calculate GC skew ((G-C)/(G+C)) per window along each sequence, plus its cumulative sum.")
+                .arg(
+                    Arg::new("fasta")
+                        .value_parser(value_parser!(PathBuf))
+                        .num_args(0..)
+                        .help("Input fasta file path(s)."),
+                )
+                .arg(
+                    Arg::new("window")
+                        .short('w')
+                        .long("window")
+                        .value_parser(value_parser!(usize))
+                        .num_args(1)
+                        .required(false)
+                        .help("Window size in bases. Default 1000."),
+                ),
+        )
         .get_matches();
 
     // feed command line options to each main function
@@ -306,6 +379,15 @@ fn main() -> Result<()> {
         }
         Some(("split", matches)) => {
             split::split_fasta(matches)?;
+        }
+        Some(("stats", matches)) => {
+            stats::get_stats(matches)?;
+        }
+        Some(("telomere", matches)) => {
+            telomere::find_telomeres(matches)?;
+        }
+        Some(("skew", matches)) => {
+            skew::get_skew(matches)?;
         }
         _ => {
             println!("Subcommand invalid, run with '--help' for subcommand options. Exiting.");

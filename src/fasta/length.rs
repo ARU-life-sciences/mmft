@@ -4,14 +4,14 @@ use crate::{
 };
 use anyhow::{bail, Result};
 use noodles_fasta::{self as fasta, record::Definition, Record};
-use std::io;
+use std::io::{self, BufWriter, Write};
 
 pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
     let input_file = crate::get_fasta_files(matches);
     let extract_length = matches.get_one::<usize>("extract");
     let less = matches.get_flag("less");
 
-    let mut writer = fasta::Writer::new(io::stdout());
+    let mut writer = fasta::Writer::new(BufWriter::new(io::stdout()));
 
     match input_file {
         // read directly from files
@@ -60,7 +60,7 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                         }
                     } else {
                         // write to stdout
-                        println!("{}\t{}\t{}", basename, id, len);
+                        writeln!(writer.get_mut(), "{}\t{}\t{}", basename, id, len)?;
                     }
                 }
             }
@@ -108,7 +108,7 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
                         }
                     } else {
                         // write to stdout
-                        println!("{}\t{}", id, len);
+                        writeln!(writer.get_mut(), "{}\t{}", id, len)?;
                     }
                 }
             }
@@ -117,5 +117,6 @@ pub fn get_lengths(matches: &clap::ArgMatches) -> Result<()> {
             }
         },
     }
+    writer.get_mut().flush()?;
     Ok(())
 }

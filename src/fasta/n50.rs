@@ -56,5 +56,5 @@ fn inner_n50(numbers: &[usize], nb_bases_total: usize) -> usize {
         }
     }
 
-    numbers[numbers.len() - 1]
+    numbers.last().copied().unwrap_or(0)
 }
